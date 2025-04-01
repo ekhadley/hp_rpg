@@ -117,20 +117,22 @@ def random_number_tool_handler(max: int) -> int:
 def list_directory_tool_handler() -> list[str]:
     """list_directory: Read the contents of a file in the local directory.
     """
-    files = os.listdir("./")
+    global current_story
+    files = os.listdir(f"./stories/{current_story}")
     return files
 
 def read_file_tool_handler(file_path: str) -> str:
     """read_file: Read the contents of a file in the local directory.
     file_path (string): Name of the file to be read.
     """
-    with open(file_path, 'r') as file:
+    global current_story
+    with open(f"./{current_story}/{file_path}", 'r') as file:
         content = file.read()
     return content
 
 def roll_dice_tool_handler(dice: str) -> int:
-    """roll_dice: Roll a set of dice with the given number of sides.
-    dice (string): A string describing the set of dice to roll, of the form 'dX' or 'XdY'. X is the number of times to roll, Y is the number of sides. If no X is provided, it defaults to 1. The rolls will be added together.
+    """roll_dice: Roll a set of dice with the given number of sides and return the sum of the rolls.
+    dice (string): A string describing the set of dice to roll, of the form 'dX' or 'XdY'. X is the number of times to roll, Y is the number of sides. If no X is provided, it defaults to 1.
     """
     dice = dice.lower()
     num, sides = dice.strip().split('d')
@@ -154,5 +156,11 @@ def roll_dice_tool_handler(dice: str) -> int:
     rolls = [random.randint(1, sides) for _ in range(num)]
     return sum(rolls)
 
+def read_cc_guide_tool_handler() -> str:
+    """read_character_creation_guide: Lets you view the contents of the file concerning the character creation guide. You should use this tool 
+    """
+    with open("character_creation.md", 'r') as file:
+        content = file.read()
+    return content
 
 basic_tb = Toolbox([list_directory_tool_handler, read_file_tool_handler, random_number_tool_handler])

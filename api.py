@@ -9,20 +9,17 @@ from utils import *
 import model_tools
 from model_tools import Tool, Toolbox
 
-class OpenAIRunner:
-    def __init__(self, model_name:str, tb:Toolbox, asst_id:str=None, text_output_callback: callable = None, tool_request_callback: callable = None, tool_submit_callback: callable = None):
-        self.model_name = model_name
+
+class OpenAIAssistant:
+    def __init__(self, model_name:str = None, tb:Toolbox = None, instructions="", text_output_callback: callable = None, tool_request_callback: callable = None, tool_submit_callback: callable = None, asst_id:str=None):
+        self.model_name = model_name if model_name else "gpt-4o-mini"
         self.tb = tb
-        self.tool_schemas = tb.openai_schemas
-        if asst_id:
-            self.assistant = openai.beta.assistants.retrieve(asst_id)
-        else:
-            self.assistant = openai.beta.assistants.create(
-                name = "GPT-4o Assistant",
-                instructions = "",
-                model = "model_name",
-                tools = tb.openai_schemas
-            )
+        self.tool_schemas = tb.openai_schemas if tb else []
+        self.assistant = openai.beta.assistants.create(
+            instructions = instructions,
+            model = self.model_name,
+            tools = self.tool_schemas
+        )
         self.assistant_id = self.assistant.id
         self.thread = openai.beta.threads.create()
         self.thread_id = self.thread.id
@@ -120,14 +117,16 @@ class OpenAIRunner:
                 self.tool_submit_callback(names=tool_names, inputs=tool_inputss, results=[r['output'] for r in tool_outputs])
             self.runStream(self.submitToolOutputs(event.data.id, tool_outputs))
 
-class AnthropicRunner:
-    def __init__(self, model_name:str, tb:Toolbox, text_output_callback: callable = None, tool_request_callback: callable = None, tool_submit_callback: callable = None):
-        self.model_name = model_name
+class AnthropicAssistant:
+    def __init__(self, model_name:str = None, tb:Toolbox = None, instructions = "", text_output_callback: callable = None, tool_request_callback: callable = None, tool_submit_callback: callable = None):
+        self.model_name = model_name if model_name else "claude-3-haiku-20240307"
         self.client = anthropic.Anthropic()
         self.tb = tb
-        self.tool_schemas = tb.anthropic_schemas
+        self.tool_schemas = tb.anthropic_schemas if tb else []
         self.messages: list[dict] = []
         self.max_tokens = 4096
+
+        self.addUserMessage(instructions)
 
         self.text_output_callback = text_output_callback
         self.tool_request_callback = tool_request_callback
@@ -204,6 +203,24 @@ class AnthropicRunner:
                 else:
                     if debug(): print(red, "event: ", endc, event)
 
+
+def Assistant(
+    model_name:str = None,
+    tb:Toolbox = None,
+    instructions = "",
+    text_output_callback: callable = None,
+    tool_request_callback: callable = None,
+    tool_submit_callback: callable = None
+) -> OpenAIAssistant|AnthropicAssistant:
+
+    if (provider:=os.getenv("PROVIDER").lower()) == "anthropic":
+        return AnthropicAssistant(model_name, tb, instructions, text_output_callback, tool_request_callback, tool_submit_callback)
+    elif provider == "openai":
+        return OpenAIAssistant(model_name, tb, instructions, text_output_callback, tool_request_callback, tool_submit_callback, asst_id="asst_AILCleJXbQ5PbdzrJMK8a7Yp")
+    else:
+        raise ValueError(f"PROVIDER value '{provider}' is unknown.")
+
+
 def example_text_callback(**kwargs):
     print(f"Assistant: '{kwargs['text']}'")
 def example_tool_request_callback(**kwargs):
@@ -212,27 +229,3 @@ def example_tool_submit_callback(**kwargs):
     #print(f"Tool output submitted: {kwargs['name']}({kwargs['inputs']}) = {kwargs['result']}")
     for i in range(len(kwargs['names'])):
         print(f"Tool output submitted: {kwargs['names'][i]}({kwargs['inputs'][i]}) = {kwargs['results'][i]}")
-
-if __name__ == "__main__":
-    tb = model_tools.basic_tb
-
-    if os.getenv("PROVIDER").lower() == "anthropic":
-        #runner = AnthropicRunner("claude-3-7-sonnet-20250219", tb)
-        #runner = AnthropicRunner("claude-3-7-sonnet-20250219", tb, text_output_callback=example_text_callback, tool_request_callback=example_tool_request_callback, tool_submit_callback=example_tool_submit_callback)
-        #runner = AnthropicRunner("claude-3-haiku-20240307", tb)
-        runner = AnthropicRunner("claude-3-haiku-20240307", tb, text_output_callback=example_text_callback, tool_request_callback=example_tool_request_callback, tool_submit_callback=example_tool_submit_callback)
-    else:
-        #runner = OpenAIRunner("gpt-4o-mini", tb, asst_id="asst_AILCleJXbQ5PbdzrJMK8a7Yp")
-        runner = OpenAIRunner("gpt-4o-mini", tb, asst_id="asst_AILCleJXbQ5PbdzrJMK8a7Yp", text_output_callback=example_text_callback, tool_request_callback=example_tool_request_callback, tool_submit_callback=example_tool_submit_callback)
-        #runner = OpenAIRunner("gpt-4o", tb, asst_id="asst_AILCleJXbQ5PbdzrJMK8a7Yp")
-        #runner = OpenAIRunner("gpt-4o", tb, asst_id="asst_AILCleJXbQ5PbdzrJMK8a7Yp", text_output_callback=example_text_callback, tool_request_callback=example_tool_request_callback, tool_submit_callback=example_tool_submit_callback)
-
-    #runner.addUserMessage("How mant .txt files are in the current dir?")
-    #runner.addUserMessage("Please roll a d20 and tell me the result.")
-    #runner.addUserMessage("Please generate a random number 1-100 and tell me the result. Then ls the directory and read the text file. Then add the number there to the random number.")
-    runner.addUserMessage("Please roll 2 d20's and add them together.")
-    #runner.addUserMessage("hello how are you?")
-
-    runner.run()
-    #runner.printMessagesRaw()
-    runner.printMessages()
