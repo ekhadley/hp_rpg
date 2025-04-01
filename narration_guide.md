@@ -79,6 +79,10 @@
 #### Files
   - You have access to a single directory containing files for the current story, as well as tools to write and read files there.
   - The player character sheet is always named `pc.md`.
-  - Additional background information for the player character or narrative context may be in `background.md`.
   - A running summary of the story thus far is maintained in `story_summary.md`.
   - Character sheets for other characters follow the format `character_name.md`.
+  - A story cannot begin without a player character sheet. A story cannot be picked back up without a story summary. 
+  - If the current story already has a `pc.md`, it will immediately be shown to you. If it has a `story_summary.md` it will also be shown to you after. If you are not shown either, they do not exist.
+  - If there is no player character sheet, please ask the user if they would like to make a character. If they confirm, please read the character sheet creation guide.
+  - If there is a character sheet and a story_summary, prompt them to resume their story. If they confirm, read the story summary file and begin exactly where it left off.
+  - If there is no character sheet, prompt them to begin a story at whatever point they wish.

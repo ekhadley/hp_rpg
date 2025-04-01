@@ -5,6 +5,7 @@ import inspect
 
 from utils import *
 
+global current_story
 
 def parse_handler_metadata(func):
     doc = inspect.getdoc(func)
@@ -115,24 +116,39 @@ def random_number_tool_handler(max: int) -> int:
     return random_number
 
 def list_directory_tool_handler() -> list[str]:
-    """list_directory: Read the contents of a file in the local directory.
+    """list_files: List the files in the local directory.
     """
-    global current_story
-    files = os.listdir(f"./stories/{current_story}")
+    files = os.listdir(f"./")
     return files
 
 def read_file_tool_handler(file_path: str) -> str:
     """read_file: Read the contents of a file in the local directory.
     file_path (string): Name of the file to be read.
     """
-    global current_story
-    with open(f"./{current_story}/{file_path}", 'r') as file:
+    with open(f"./{file_path}", 'r') as file:
+        content = file.read()
+    return content
+
+basic_tb = Toolbox([list_directory_tool_handler, read_file_tool_handler, random_number_tool_handler])
+
+
+def list_story_files_tool_handler() -> list[str]:
+    """list_files: Lists all files in the current story directory.
+    """
+    files = os.listdir(f"./stories/{current_story}")
+    return files
+
+def read_story_file_tool_handler(file_path: str) -> str:
+    """read_file: Read the contents of a file in the current story directory.
+    file_name (string): Name of the file to be read. Should include the file extension, and not include any folders.
+    """
+    with open(f"./stories/{current_story}/{file_path}", 'r') as file:
         content = file.read()
     return content
 
 def roll_dice_tool_handler(dice: str) -> int:
     """roll_dice: Roll a set of dice with the given number of sides and return the sum of the rolls.
-    dice (string): A string describing the set of dice to roll, of the form 'dX' or 'XdY'. X is the number of times to roll, Y is the number of sides. If no X is provided, it defaults to 1.
+    dice (string): A string describing the set of dice to roll, of the form 'dX' or 'XdY'. Y is the number of sides on the dice, X is the number of times to roll. If no X is provided, it defaults to 1.
     """
     dice = dice.lower()
     num, sides = dice.strip().split('d')
@@ -162,5 +178,3 @@ def read_cc_guide_tool_handler() -> str:
     with open("character_creation.md", 'r') as file:
         content = file.read()
     return content
-
-basic_tb = Toolbox([list_directory_tool_handler, read_file_tool_handler, random_number_tool_handler])
