@@ -8,10 +8,20 @@ import anthropic
 from utils import *
 import model_tools
 from model_tools import Tool, Toolbox
+from callbacks import example_text_callback, example_tool_request_callback, example_tool_submit_callback
 
 
 class OpenAIAssistant:
-    def __init__(self, model_name:str = None, tb:Toolbox = None, instructions="", text_output_callback: callable = None, tool_request_callback: callable = None, tool_submit_callback: callable = None, asst_id:str=None):
+    def __init__(
+            self,
+            model_name:str = None,
+            tb:Toolbox = None,
+            instructions="",
+            text_output_callback: callable = None,
+            tool_request_callback: callable = None,
+            tool_submit_callback: callable = None,
+            turn_end_callback: callable = None
+        ):
         self.model_name = model_name if model_name else "gpt-4o-mini"
         self.tb = tb
         self.tool_schemas = tb.openai_schemas if tb else []
@@ -27,6 +37,7 @@ class OpenAIAssistant:
         self.text_output_callback = text_output_callback
         self.tool_request_callback = tool_request_callback
         self.tool_submit_callback = tool_submit_callback
+        self.turn_end_callback = turn_end_callback
     
     def getMessages(self):
         return openai.beta.threads.messages.list(self.thread_id)
@@ -39,7 +50,7 @@ class OpenAIAssistant:
         for message in messages["data"]:
             role = message["role"]
             content = message["content"]
-            color = yellow if role == 'assistant' else green
+            color = magenta if role == 'assistant' else yellow
             content_str = ""
             if isinstance(content, list):
                 for item in content:
@@ -80,6 +91,8 @@ class OpenAIAssistant:
     def run(self) -> None:
         with self.getStream() as stream:
             self.runStream(stream)
+        if self.turn_end_callback:
+            self.turn_end_callback()
 
     def runStream(self, stream,) -> None:
         tool_submit_required = False
@@ -118,7 +131,16 @@ class OpenAIAssistant:
             self.runStream(self.submitToolOutputs(event.data.id, tool_outputs))
 
 class AnthropicAssistant:
-    def __init__(self, model_name:str = None, tb:Toolbox = None, instructions = "", text_output_callback: callable = None, tool_request_callback: callable = None, tool_submit_callback: callable = None):
+    def __init__(
+            self,
+            model_name:str = None,
+            tb:Toolbox = None,
+            instructions = "",
+            text_output_callback: callable = None,
+            tool_request_callback: callable = None,
+            tool_submit_callback: callable = None,
+            turn_end_callback: callable = None
+        ):
         self.model_name = model_name if model_name else "claude-3-haiku-20240307"
         self.client = anthropic.Anthropic()
         self.tb = tb
@@ -131,6 +153,7 @@ class AnthropicAssistant:
         self.text_output_callback = text_output_callback
         self.tool_request_callback = tool_request_callback
         self.tool_submit_callback = tool_submit_callback
+        self.turn_end_callback = turn_end_callback
     
     def printMessages(self) -> None:
         if not self.messages:
@@ -139,7 +162,7 @@ class AnthropicAssistant:
         for message in self.messages:
             role = message["role"]
             content = message["content"]
-            color = yellow if role == 'assistant' else green
+            color = magenta if role == 'assistant' else yellow
             content_str = ""
             if isinstance(content, list):
                 for item in content:
@@ -199,9 +222,10 @@ class AnthropicAssistant:
                             self.tool_submit_callback(names=tool_names, inputs=tool_inputss, results=[r['content'] for r in tool_results])
                         self.addUserMessage(tool_results)
                         self.run()
-                        return
+                        #return
                 else:
                     if debug(): print(red, "event: ", endc, event)
+
 
 
 def Assistant(
@@ -214,18 +238,41 @@ def Assistant(
 ) -> OpenAIAssistant|AnthropicAssistant:
 
     if (provider:=os.getenv("PROVIDER").lower()) == "anthropic":
-        return AnthropicAssistant(model_name, tb, instructions, text_output_callback, tool_request_callback, tool_submit_callback)
+        return AnthropicAssistant(
+            model_name,
+            tb,
+            instructions,
+            text_output_callback,
+            tool_request_callback,
+            tool_submit_callback
+        )
     elif provider == "openai":
-        return OpenAIAssistant(model_name, tb, instructions, text_output_callback, tool_request_callback, tool_submit_callback, asst_id="asst_AILCleJXbQ5PbdzrJMK8a7Yp")
+        return OpenAIAssistant(
+            model_name,
+            tb,
+            instructions,
+            text_output_callback,
+            tool_request_callback,
+            tool_submit_callback,
+        )
     else:
         raise ValueError(f"PROVIDER value '{provider}' is unknown.")
 
+if __name__ == "__main__":
+    basic_tb = Toolbox([
+        model_tools.list_directory_tool_handler,
+        model_tools.read_file_tool_handler,
+        model_tools.random_number_tool_handler
+    ])
 
-def example_text_callback(**kwargs):
-    print(f"Assistant: '{kwargs['text']}'")
-def example_tool_request_callback(**kwargs):
-    print(f"Tool requested: {kwargs['name']}({kwargs['inputs']})")
-def example_tool_submit_callback(**kwargs):
-    #print(f"Tool output submitted: {kwargs['name']}({kwargs['inputs']}) = {kwargs['result']}")
-    for i in range(len(kwargs['names'])):
-        print(f"Tool output submitted: {kwargs['names'][i]}({kwargs['inputs'][i]}) = {kwargs['results'][i]}")
+    asst = Assistant(
+        #model_name = "claude-3-7-sonnet-20250219",
+        tb = basic_tb,
+        instructions = "You are a helpful assistant that can use tools.",
+        text_output_callback = example_text_callback,
+        tool_request_callback = example_tool_request_callback,
+        tool_submit_callback = example_tool_submit_callback
+    )
+
+    asst.addUserMessage("Hello, assistant. Can you generate a random number from 1-10 and add to it the number of files in the current directory?")
+    asst.run()

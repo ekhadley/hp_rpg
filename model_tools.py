@@ -55,9 +55,9 @@ class Tool:
                 "description": self.description,
                 "parameters": {
                     "type": "object",
-                    "properties": self.arg_properties
+                    "properties": self.arg_properties,
+                    "required": [key for key in self.arg_properties.keys()]
                 },
-                "required": [key for key in self.arg_properties.keys()]
             }
         }
         self.anthropic_schema = {
@@ -129,8 +129,7 @@ def read_file_tool_handler(file_path: str) -> str:
         content = file.read()
     return content
 
-basic_tb = Toolbox([list_directory_tool_handler, read_file_tool_handler, random_number_tool_handler])
-
+############## story tools ################
 
 def list_story_files_tool_handler() -> list[str]:
     """list_files: Lists all files in the current story directory.
@@ -140,11 +139,24 @@ def list_story_files_tool_handler() -> list[str]:
 
 def read_story_file_tool_handler(file_path: str) -> str:
     """read_file: Read the contents of a file in the current story directory.
-    file_name (string): Name of the file to be read. Should include the file extension, and not include any folders.
+    file_name (string): Name of the file to be read. Should include the file extension, and not include any parent folders or subfolders.
     """
     with open(f"./stories/{current_story}/{file_path}", 'r') as file:
         content = file.read()
     return content
+
+def write_story_file_tool_handler(file_path: str, contents: str) -> str:
+    """save_file: Create a file in the current story directory with the given name and contents. Will fail if the file already exists.
+    file_name (string): Name of the file to save to. Should be a markdown file, ending in '.md'. Should not be a part of any subfolder.
+    contents (string): The contents to write to the file. Do not include backticks around the contents to be saved.
+    """
+    if not file_path.endswith(".md"):
+        file_path += ".md"
+    if os.path.exists(f"./stories/{current_story}/{file_path}"):
+        raise ValueError("File already exists.")
+    with open(f"./stories/{current_story}/{file_path}", 'w') as file:
+        file.write(contents)
+    return "File saved successfully."
 
 def roll_dice_tool_handler(dice: str) -> int:
     """roll_dice: Roll a set of dice with the given number of sides and return the sum of the rolls.

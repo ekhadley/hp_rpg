@@ -89,8 +89,7 @@ Students start with basic robes and a wand. Add any relevant narrative possessio
 
 ## Section 8: Advancement
 
-LLMs should guide character progression based on narrative milestones. Upon advancing to a new year:
-
+You should guide character progression based on narrative milestones. Upon advancing to a new year:
 - Gain +1 to any stat (max 20).
 - Choose one new proficiency or spell.
 - Update MS and HP values accordingly.
@@ -98,8 +97,7 @@ LLMs should guide character progression based on narrative milestones. Upon adva
 
 ---
 
-## Notes for LLM Implementation:
-
+## Guidelines
 - Do not assume stats or values—prompt user clearly when fields are missing.
 - Avoid defaulting to Gryffindor unless chosen explicitly.
 - Let narrative details influence stat interpretation. A scholarly child may favor MA, a duel-prone prankster may favor PP.

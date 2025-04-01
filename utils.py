@@ -14,6 +14,7 @@ gray = "\033[38;5;8m"
 bold = '\033[1m'
 underline = '\033[4m'
 endc = '\033[0m'
+magenta = '\033[35m'
 
 
 def debug() -> bool:
