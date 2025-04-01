@@ -47,23 +47,6 @@ Each house provides two special abilities - one at Year 1 and another at Year 4.
 - **Spellcasting**: To cast a spell, roll d20 + MP modifier + proficiency bonus (if proficient in the spell’s category) vs. the spell’s DC. MS cost is spent regardless of success or failure.
 - **Saving Throws**: When targeted by a spell or effect requiring resistance, roll d20 + relevant stat modifier (specified by the spell/effect) vs. the caster's Spell Save DC (`8 + Caster's MP Modifier + Caster's Proficiency Bonus`) or a set DC for environmental effects.
 
-- **When Rolls Are Required**:
-	- The outcome of an action is uncertain or contested (e.g., attacking an opponent, attempting to persuade someone under pressure, sneaking past an alert guard).
-	- The action involves a significant challenge or risk (e.g., climbing a treacherous surface, brewing a volatile potion, casting a spell under duress).
-	- The action directly opposes another character's active efforts (e.g., a duel, resisting interrogation, arm-wrestling).
-
-- **Automatic Success**:
-	- The action is trivial or well within the character's established capabilities under no pressure (e.g., walking across a room, opening an unlocked door, recalling common knowledge, casting *Lumos* in a quiet setting).
-	- The character has a specific ability, spell, or item that guarantees success in that context.
-	- The opposing force is negligible (e.g., persuading a willing friend, pushing over a small, unstable object).
-
-- **Automatic Failure**:
-	- The action is impossible within the laws of magic or physics as established (e.g., attempting to physically fly without aid, lifting a magically sealed object with brute force alone).
-	- The character lacks the necessary tools, components, abilities, or conditions (e.g., brewing a potion without ingredients, casting a spell with 0 MS, trying to use *Alohomora* on a door explicitly stated to be magically sealed against it).
-	- The action is directly and overwhelmingly countered (e.g., trying to sneak past an observer who is actively watching the character).
-
-- **GM Discretion**: The simulator (acting as GM) determines if a roll is needed based on context, narrative stakes, and these guidelines. Detailed player descriptions aid this process.
-
 #### Hit Points and Physical Health
 - **Taking Damage**: HP is reduced by attacks, hazards, or certain strenuous activities (like Hufflepuff's Perseverance).
 - **Critical State**: At 0 HP, a character falls unconscious and is incapacitated. Further damage while unconscious may lead to death (GM discretion or specific rules for lasting injuries).

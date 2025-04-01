@@ -39,7 +39,8 @@ class TerminalPrinter(CallbackHandler):
         print(self.tool_color, f"Tool requested: {name}({inputs})", endc)
     def tool_submit_callback(self, names: list[str], inputs: list[str|dict], results: list[str]):
         self.narrating = False
-        for i in range(len(names)):
-            print(self.tool_color, f"\nTool output submitted: {names[i]}({inputs[i]}) = {results[i]}", endc)
+        for i, name in enumerate(names):
+            if name not in ["summarize_story", "read_story_summary", "read_character_creation_guide", "write_file", "read_file"]:
+                print(self.tool_color, f"\nTool output submitted: {name}({inputs[i]}) = {results[i]}", endc)
     def turn_end_callback(self):
         self.narrating = False

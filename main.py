@@ -2,7 +2,7 @@ import os
 
 from utils import *
 import model_tools
-from model_tools import Toolbox, roll_dice_tool_handler, read_story_file_tool_handler, list_story_files_tool_handler, read_cc_guide_tool_handler, write_story_file_tool_handler
+from model_tools import Toolbox
 from api import Assistant, example_text_callback, example_tool_request_callback, example_tool_submit_callback
 import callbacks
 
@@ -16,8 +16,9 @@ def getFullInstructionMessage() -> str:
         ruleset = file.read()
     with open("spellbook.md", "r") as file:
         spells = file.read()
-    story_files = os.listdir(f"./stories/{current_story}")
-    full = f"```\n{ruleset}```\n\n```\n{spells}```\n\n```\n{narration_guide}\n - The files currently in the story directory are: {story_files}```"
+    #story_files = os.listdir(f"./stories/{current_story}")
+    #full = f"```\n{ruleset}```\n\n```\n{spells}```\n\n```\n{narration_guide}\n - The files currently in the story directory are: {story_files}```"
+    full = f"```\n{ruleset}```\n\n```\n{spells}```\n\n```\n{narration_guide}```"
     return full
 
 def makeNewStory(story_name: str):
@@ -39,27 +40,35 @@ def loadIntoStory():
         model_tools.current_story = current_story = stories[choice-1]
 
 
+# TODO:
+# - token counting and appropriate warnings.
+# - running api cost command?
+# - sumarization instructions.
 
 if __name__ == "__main__":
     loadIntoStory()
     print(f"story selected: {current_story}")
 
     dm_tb = Toolbox([
-        roll_dice_tool_handler,
-        read_story_file_tool_handler,
-        list_story_files_tool_handler,
-        read_cc_guide_tool_handler,
-        write_story_file_tool_handler
+        model_tools.roll_dice_tool_handler,
+        model_tools.read_story_file_tool_handler, #
+        model_tools.list_story_files_tool_handler,
+        model_tools.read_cc_guide_tool_handler, # 
+        model_tools.write_story_file_tool_handler, # 
+        model_tools.read_story_summary_tool_handler, # 
+        model_tools.summarize_story_tool_handler # 
     ])
     tp = callbacks.TerminalPrinter()
     asst = Assistant(
         model_name = "claude-3-7-sonnet-20250219",
-        #model_name = "gpt-4o-mini",
+        #model_name = "claude-3-haiku-20240307",
+        #model_name = "gpt-4o",
+        #model_name = "gpt-4.5-preview",
         tb = dm_tb,
         instructions = model_instruction,
         text_output_callback = tp.text_output_callback,
         tool_request_callback = tp.tool_request_callback,
-        #tool_submit_callback = tp.tool_submit_callback
+        tool_submit_callback = tp.tool_submit_callback
     )
     asst.addUserMessage(getFullInstructionMessage())
     asst.run()
@@ -67,3 +76,4 @@ if __name__ == "__main__":
     while True:
         asst.addUserMessage(input("\n > "))
         asst.run()
+        #asst.printMessages()

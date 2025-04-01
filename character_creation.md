@@ -18,14 +18,14 @@ This reference document is designed to help LLMs guide users through the process
 
 ## Section 2: Ability Scores
 
-Each stat ranges from 1 to 20. 10 is average. Apply modifiers as (Stat - 10) / 2, rounded down.
+Each stat ranges from 1 to 20. 10 is average. Apply modifiers as (Stat - 10) / 2, rounded down. At year 1 character creation, you get 40 skill points to allocate. The minimum for a stat is 8, and the maximum is 13.
 
 - **Magical Prowess (MP)**: Spellcasting strength.
 - **Physical Prowess (PP)**: Athleticism, reflexes, HP.
 - **Mental Acuity (MA)**: Knowledge, perception, magical theory.
 - **Social Grace (SG)**: Charisma, persuasion, social rolls.
 
-Optional method for stat generation (if user doesn't provide values):
+Typical method for stat generation:
 
 - Assign one stat as 14, one as 13, one as 12, one as 10.
 
@@ -33,12 +33,11 @@ Optional method for stat generation (if user doesn't provide values):
 
 ## Section 3: Proficiencies
 
-Each stat is associated with several proficiencies. Users may choose **3 total**, with at least one tied to MP.
-
-- **MP**: Charms, Transfiguration, Potions, Standard spells, Curses, Jinxes
-- **PP**: Flying, Dueling, Stealth, Elemental spells
-- **MA**: History of Magic, Arithmancy, Ancient Runes, Herbology, Healing spells, Investigation, Perception
-- **SG**: Persuasion, Deception, Intimidation, Performance, Enchantment spells
+At character creation (Year 1), choose **two** proficiencies based on character background/aptitude. Gain **one** additional proficiency based on your chosen House (e.g., Gryffindor might grant Dueling, Ravenclaw History of Magic, Hufflepuff Herbology, Slytherin Deception - GM decides or provides options). You gain additional proficiencies as you progress through years.
+ - **MP**: Charms, Transfiguration, Potions, Standard spells, Curses, Jinxes, Nonverbal Casting
+ - **PP**: Flying, Dueling, Stealth, Elemental spells.
+ - **MA**: History of Magic, Arithmancy, Ancient Runes, Herbology, Healing spells, Investigation, Perception.
+ - **SG**: Persuasion, Deception, Intimidation, Performance, Enchantment spells.
 
 ---
 
