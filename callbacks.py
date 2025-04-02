@@ -15,32 +15,32 @@ def example_tool_submit_callback(names: list[str], inputs: list[str|dict], resul
 class CallbackHandler:
     def text_output(self, text):
         pass
-    def tool_request_callback(self, name:str, inputs: str|dict):
+    def tool_request(self, name:str, inputs: str|dict):
         pass
-    def tool_submit_callback(self, names: list[str], inputs: list[str|dict], results: list[str]):
+    def tool_submit(self, names: list[str], inputs: list[str|dict], results: list[str]):
         pass
-    def turn_end_callback(self):
+    def turn_end(self):
         pass
 
-class TerminalPrinter(CallbackHandler):
+class TerminalPrinter(CallbackHandler): # streams text into the terminal in nice blocks.
     def __init__(self, assistant_color=white, tool_color=cyan, user_color=brown):
         self.assistant_color = assistant_color
         self.user_color = user_color
         self.tool_color = tool_color
         self.narrating = False
     
-    def text_output_callback(self, text):
+    def text_output(self, text):
         if not self.narrating:
             self.narrating = True
             print(self.assistant_color, f"Narrator: ")
         print(self.assistant_color, text, sep="", end=self.user_color)
-    def tool_request_callback(self, name:str, inputs: str|dict):
+    def tool_request(self, name:str, inputs: str|dict):
         self.narrating = False
         print(self.tool_color, f"Tool requested: {name}({inputs})", endc)
-    def tool_submit_callback(self, names: list[str], inputs: list[str|dict], results: list[str]):
+    def tool_submit(self, names: list[str], inputs: list[str|dict], results: list[str]):
         self.narrating = False
         for i, name in enumerate(names):
             if name not in ["summarize_story", "read_story_summary", "read_character_creation_guide", "write_file", "read_file"]:
                 print(self.tool_color, f"\nTool output submitted: {name}({inputs[i]}) = {results[i]}", endc)
-    def turn_end_callback(self):
+    def turn_end(self):
         self.narrating = False

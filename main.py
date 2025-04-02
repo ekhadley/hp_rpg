@@ -2,24 +2,13 @@ import os
 
 from utils import *
 import model_tools
-from model_tools import Toolbox
-from api import Assistant, example_text_callback, example_tool_request_callback, example_tool_submit_callback
+from model_tools import Toolbox, getFullInstructionMessage
+from api import Assistant
 import callbacks
 
 
 
 model_instruction = "Your job is to operate as an interactive narrator for the world of Harry Potter, enhanced with a dice-based RPG ruleset inspired by D&D but tailored for spellcasting freedom. This system blends immersive storytelling with mechanics to create a dynamic experience. Your role is to weave authentic, atmospheric descriptions and dialogue in J.K. Rowling's style while integrating RPG elements like character stats, dice rolls, and a Magical Stamina system for spellcasting. The simulation maintains chronological consistency, character authenticity, and player agency. You will be given 3 instruction files. One containing the ruleset of the game, one containing all spells and abilities, and one containing instructions for correct narration and storytelling. You should follow these guides precisely to ensure a consistent and engaging experience for the player."
-def getFullInstructionMessage() -> str:
-    with open("narration_guide.md", "r") as file:
-        narration_guide = file.read()
-    with open("ruleset.md", "r") as file:
-        ruleset = file.read()
-    with open("spellbook.md", "r") as file:
-        spells = file.read()
-    #story_files = os.listdir(f"./stories/{current_story}")
-    #full = f"```\n{ruleset}```\n\n```\n{spells}```\n\n```\n{narration_guide}\n - The files currently in the story directory are: {story_files}```"
-    full = f"```\n{ruleset}```\n\n```\n{spells}```\n\n```\n{narration_guide}```"
-    return full
 
 def makeNewStory(story_name: str):
     os.mkdir(f"./stories/{story_name}")
@@ -43,7 +32,6 @@ def loadIntoStory():
 # TODO:
 # - token counting and appropriate warnings.
 # - running api cost command?
-# - sumarization instructions.
 
 if __name__ == "__main__":
     loadIntoStory()
@@ -53,22 +41,18 @@ if __name__ == "__main__":
         model_tools.roll_dice_tool_handler,
         model_tools.read_story_file_tool_handler, #
         model_tools.list_story_files_tool_handler,
-        model_tools.read_cc_guide_tool_handler, # 
         model_tools.write_story_file_tool_handler, # 
         model_tools.read_story_summary_tool_handler, # 
         model_tools.summarize_story_tool_handler # 
     ])
-    tp = callbacks.TerminalPrinter()
     asst = Assistant(
         #model_name = "claude-3-7-sonnet-20250219",
-        model_name = "claude-3-haiku-20240307",
-        #model_name = "gpt-4o",
-        #model_name = "gpt-4.5-preview",
+        #model_name = "claude-3-haiku-20240307",
+        model_name = "gpt-4o-mini",
+        #model_name = "gpt-4o-",
         tb = dm_tb,
         instructions = model_instruction,
-        text_output_callback = tp.text_output_callback,
-        tool_request_callback = tp.tool_request_callback,
-        tool_submit_callback = tp.tool_submit_callback
+        callback_handler = callbacks.TerminalPrinter()
     )
     asst.addUserMessage(getFullInstructionMessage())
     asst.run()
@@ -76,4 +60,5 @@ if __name__ == "__main__":
     while True:
         asst.addUserMessage(input("\n > "))
         asst.run()
+        asst.save(f"{current_story}/history.json")
         #asst.printMessages()

@@ -94,7 +94,7 @@ class Toolbox:
             return parameters
         elif isinstance(parameters, str):
             try:
-                parameters = json.loads(parameters)
+                return json.loads(parameters)
             except json.JSONDecodeError:
                 raise ValueError("Invalid JSON format for parameters.")
         raise ValueError("Parameters should be a JSON string or a dictionary.")
@@ -136,7 +136,7 @@ def read_file_tool_handler(file_name: str) -> str:
 def list_story_files_tool_handler() -> list[str]:
     """list_files: Lists all files in the current story directory.
     """
-    files = os.listdir(f"./stories/{current_story}")
+    files = [f for f in os.listdir(f"./stories/{current_story}") if ".md" in f]
     return files
 
 def read_story_file_tool_handler(file_name: str) -> str:
@@ -205,5 +205,25 @@ def read_cc_guide_tool_handler() -> str:
     """read_character_creation_guide: Lets you view the contents of the file concerning the character creation guide. You should use this tool whenever the user asks you to create a chracter sheet.
     """
     with open("character_creation.md", 'r') as file:
+        content = file.read()
+    return content
+
+# not a tool, we just feed this to the model manually.
+def _getFullInstructionMessage() -> str:
+    with open("narration_guide.md", "r") as file:
+        narration_guide = file.read()
+    with open("ruleset.md", "r") as file:
+        ruleset = file.read()
+    with open("spellbook.md", "r") as file:
+        spells = file.read()
+    #story_files = os.listdir(f"./stories/{current_story}")
+    #full = f"```\n{ruleset}```\n\n```\n{spells}```\n\n```\n{narration_guide}\n - The files currently in the story directory are: {story_files}```"
+    full = f"```\n{ruleset}```\n\n```\n{spells}```\n\n```\n{narration_guide}```"
+    return full
+
+def getFullInstructionMessage() -> str:
+    """read_character_creation_guide: Lets you view the contents of the file concerning the character creation guide. You should use this tool whenever the user asks you to create a chracter sheet.
+    """
+    with open("instructions.md", 'r') as file:
         content = file.read()
     return content
