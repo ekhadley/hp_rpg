@@ -1,9 +1,8 @@
-
-
 from utils import *
 
 
 
+# each type of callback is given these exact arguments as keywords
 def example_text_callback(text: str):
     print(f"Assistant: '{text}'")
 def example_tool_request_callback(name: str, inputs: str|dict):
@@ -23,7 +22,7 @@ class CallbackHandler:
         pass
 
 class TerminalPrinter(CallbackHandler): # streams text into the terminal in nice blocks.
-    def __init__(self, assistant_color=white, tool_color=cyan, user_color=brown):
+    def __init__(self, assistant_color=brown, tool_color=cyan, user_color=white):
         self.assistant_color = assistant_color
         self.user_color = user_color
         self.tool_color = tool_color
