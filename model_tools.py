@@ -201,26 +201,6 @@ def roll_dice_tool_handler(dice: str) -> int:
     rolls = [random.randint(1, sides) for _ in range(num)]
     return sum(rolls)
 
-def read_cc_guide_tool_handler() -> str:
-    """read_character_creation_guide: Lets you view the contents of the file concerning the character creation guide. You should use this tool whenever the user asks you to create a chracter sheet.
-    """
-    with open("character_creation.md", 'r') as file:
-        content = file.read()
-    return content
-
-# not a tool, we just feed this to the model manually.
-def _getFullInstructionMessage() -> str:
-    with open("narration_guide.md", "r") as file:
-        narration_guide = file.read()
-    with open("ruleset.md", "r") as file:
-        ruleset = file.read()
-    with open("spellbook.md", "r") as file:
-        spells = file.read()
-    #story_files = os.listdir(f"./stories/{current_story}")
-    #full = f"```\n{ruleset}```\n\n```\n{spells}```\n\n```\n{narration_guide}\n - The files currently in the story directory are: {story_files}```"
-    full = f"```\n{ruleset}```\n\n```\n{spells}```\n\n```\n{narration_guide}```"
-    return full
-
 def getFullInstructionMessage() -> str:
     """read_character_creation_guide: Lets you view the contents of the file concerning the character creation guide. You should use this tool whenever the user asks you to create a chracter sheet.
     """
