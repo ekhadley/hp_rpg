@@ -23,7 +23,7 @@ class CallbackHandler:
         pass
 
 class TerminalPrinter(CallbackHandler):
-    def __init__(self, assistant_color=magenta, tool_color=cyan, user_color=yellow):
+    def __init__(self, assistant_color=white, tool_color=cyan, user_color=brown):
         self.assistant_color = assistant_color
         self.user_color = user_color
         self.tool_color = tool_color

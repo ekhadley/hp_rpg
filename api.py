@@ -123,7 +123,13 @@ class OpenAIAssistant:
                         "output": result
                     })
             else:
-                if debug(): print(event.event)
+                if debug():
+                    if event.event == "thread.run.failed":
+                        print(bold, red, f"ERROR: RUN FAILED:\n")
+                        print(event.to_dict())
+                    else:
+                        print(event.event)
+
         stream.close()
         if tool_submit_required:
             if self.tool_submit_callback:
@@ -229,24 +235,19 @@ class AnthropicAssistant:
 
 
 def Assistant(
-    model_name:str = None,
-    tb:Toolbox = None,
-    instructions = "",
+    model_name:str,
+    tb:Toolbox,
+    instructions,
     text_output_callback: callable = None,
     tool_request_callback: callable = None,
     tool_submit_callback: callable = None
 ) -> OpenAIAssistant|AnthropicAssistant:
 
-    if (provider:=os.getenv("PROVIDER").lower()) == "anthropic":
-        return AnthropicAssistant(
-            model_name,
-            tb,
-            instructions,
-            text_output_callback,
-            tool_request_callback,
-            tool_submit_callback
-        )
-    elif provider == "openai":
+    is_openai_model_name = "gpt" in model_name
+    if is_openai_model_name and os.getenv("PROVIDER") == "anthropic":
+        raise ValueError(red, bold, "env variable PROVIDER set to anthropic, but model name is openai")
+    elif is_openai_model_name:
+        if debug(): print(yellow, f"creating OpenAIAssistant with model '{model_name}'", endc)
         return OpenAIAssistant(
             model_name,
             tb,
@@ -256,7 +257,15 @@ def Assistant(
             tool_submit_callback,
         )
     else:
-        raise ValueError(f"PROVIDER value '{provider}' is unknown.")
+        if debug(): print(yellow, f"creating AnthropicAssistant with model '{model_name}'", endc)
+        return AnthropicAssistant(
+            model_name,
+            tb,
+            instructions,
+            text_output_callback,
+            tool_request_callback,
+            tool_submit_callback
+        )
 
 if __name__ == "__main__":
     basic_tb = Toolbox([
@@ -267,6 +276,7 @@ if __name__ == "__main__":
 
     asst = Assistant(
         #model_name = "claude-3-7-sonnet-20250219",
+        model_name = "claude-3-haiku-20240307",
         tb = basic_tb,
         instructions = "You are a helpful assistant that can use tools.",
         text_output_callback = example_text_callback,

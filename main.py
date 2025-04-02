@@ -60,8 +60,8 @@ if __name__ == "__main__":
     ])
     tp = callbacks.TerminalPrinter()
     asst = Assistant(
-        model_name = "claude-3-7-sonnet-20250219",
-        #model_name = "claude-3-haiku-20240307",
+        #model_name = "claude-3-7-sonnet-20250219",
+        model_name = "claude-3-haiku-20240307",
         #model_name = "gpt-4o",
         #model_name = "gpt-4.5-preview",
         tb = dm_tb,
