@@ -39,16 +39,16 @@ if __name__ == "__main__":
 
     dm_tb = Toolbox([
         model_tools.roll_dice_tool_handler,
-        model_tools.read_story_file_tool_handler, #
+        model_tools.read_story_file_tool_handler,
         model_tools.list_story_files_tool_handler,
-        model_tools.write_story_file_tool_handler, # 
-        model_tools.read_story_summary_tool_handler, # 
-        model_tools.summarize_story_tool_handler # 
+        model_tools.write_story_file_tool_handler,
+        model_tools.read_story_summary_tool_handler,
+        model_tools.summarize_story_tool_handler
     ])
     asst = Assistant(
-        #model_name = "claude-3-7-sonnet-20250219",
+        model_name = "claude-3-7-sonnet-20250219",
         #model_name = "claude-3-haiku-20240307",
-        model_name = "gpt-4o-mini",
+        #model_name = "gpt-4o-mini",
         #model_name = "gpt-4o-",
         tb = dm_tb,
         instructions = model_instruction,
@@ -60,5 +60,4 @@ if __name__ == "__main__":
     while True:
         asst.addUserMessage(input("\n > "))
         asst.run()
-        asst.save(f"{current_story}/history.json")
-        #asst.printMessages()
+        asst.save()
