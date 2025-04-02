@@ -99,7 +99,7 @@ Nonverbal spellcasting involves performing magic without speaking the incantatio
 - **Initiative**: All participants roll d20 + PP modifier at the start of combat. Highest roll goes first, then descending order. Ties broken by highest PP score, then coin flip/GM decision.
 - **Actions**: On your turn, you can take **one Action** (e.g., Cast a Spell, Attack, Use an Object, Dash, Disengage, Dodge, Help) and **move** up to your speed (typically 30 feet). Some spells or abilities might use a Bonus Action or Reaction if specified.
 - **Offensive Spells**: Caster makes a spellcasting check (d20 + MP Mod + Prof Bonus vs Spell DC). If successful, the spell takes effect. If the spell requires a save, the target makes a saving throw against the caster's Spell Save DC (`8 + Caster MP Mod + Caster Prof Bonus`). Failure means suffering the spell's effects.
-- **Defensive Spells**: Spells like *Protego* are cast as an Action (or Reaction if specified). They might negate an incoming spell/attack if the caster's spellcasting check meets or exceeds the incoming attack roll or spell save DC, or provide a temporary HP shield, as described by the spell.
+- **Defensive Spells**: Spells like *Protego* are cast as an Action (or Reaction if specified). They might negate an incoming spell/attack if the caster's spellcasting check meets or exceeds the incoming attack roll or spell save DC.
 
 #### Other Activities
 - **Potions**: Brewing requires ingredients and a check (d20 + MP modifier + Potions proficiency bonus) vs. the potion's DC. Consuming a potion is typically an Action.
