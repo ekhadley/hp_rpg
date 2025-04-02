@@ -2,10 +2,12 @@ import os
 import random
 import json
 import inspect
+from collections.abc import Callable
 
 from utils import *
 
 global current_story
+current_story = ""
 
 def parse_handler_metadata(func):
     doc = inspect.getdoc(func)
@@ -36,18 +38,18 @@ def parse_handler_metadata(func):
             "description": param_desc.strip()
         }
 
-    return type("HandlerProperties", (), {"name": tool_name, "description": description, "arg_properties": arg_properties, "handler": func})()
-    #return {"name": tool_name, "description": description, "arg_properties": arg_properties, "handler": func}
+    #return type("HandlerProperties", (), {"name": tool_name, "description": description, "arg_properties": arg_properties, "handler": func})()
+    return {"name": tool_name, "description": description, "arg_properties": arg_properties, "handler": func}
 
 
 class Tool:
     #def __init__(self, name: str, arg_properties: dict, description: str, handler):
-    def __init__(self, handler: callable):
+    def __init__(self, handler: Callable):
         handler_props = parse_handler_metadata(handler)
-        self.name = handler_props.name
-        self.description = handler_props.description
+        self.name = handler_props['name']
+        self.description = handler_props['description']
         self.handler = handler
-        self.arg_properties = handler_props.arg_properties
+        self.arg_properties = handler_props['arg_properties']
         self.openai_schema = {
             "type": "function",
             "function": {
@@ -81,21 +83,21 @@ class Tool:
             return f"error in tool {self.name}: {str(e)}"
     
 class Toolbox:
-    def __init__(self, handlers: list[callable]):
+    def __init__(self, handlers: list[Callable]):
         self.tools = [Tool(handler) for handler in handlers]
         self.tool_map = {tool.name: tool for tool in self.tools}
         self.openai_schemas = [tool.openai_schema for tool in self.tools]
         self.anthropic_schemas = [tool.anthropic_schema for tool in self.tools]
     
     def parseToolParameters(self, parameters: str|dict) -> dict:
-        if isinstance(parameters, str):
+        if isinstance(parameters, dict):
+            return parameters
+        elif isinstance(parameters, str):
             try:
                 parameters = json.loads(parameters)
             except json.JSONDecodeError:
                 raise ValueError("Invalid JSON format for parameters.")
-        elif not isinstance(parameters, dict):
-            raise ValueError("Parameters should be a JSON string or a dictionary.")
-        return parameters
+        raise ValueError("Parameters should be a JSON string or a dictionary.")
     
     def getToolResult(self, tool_name: str, parameters: str|dict) -> str:
         if tool_name in self.tool_map:

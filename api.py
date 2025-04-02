@@ -1,21 +1,20 @@
 import os
 import json
-import time
 
 import openai
 import anthropic
 
 from utils import *
 import model_tools
-from model_tools import Tool, Toolbox
+from model_tools import Toolbox
 from callbacks import example_text_callback, example_tool_request_callback, example_tool_submit_callback
 
 
 class OpenAIAssistant:
     def __init__(
             self,
-            model_name:str = None,
-            tb:Toolbox = None,
+            model_name:str,
+            tb:Toolbox,
             instructions="",
             text_output_callback: callable = None,
             tool_request_callback: callable = None,
@@ -24,7 +23,7 @@ class OpenAIAssistant:
         ):
         self.model_name = model_name if model_name else "gpt-4o-mini"
         self.tb = tb
-        self.tool_schemas = tb.openai_schemas if tb else []
+        self.tool_schemas = tb.openai_schemas
         self.assistant = openai.beta.assistants.create(
             instructions = instructions,
             model = self.model_name,
@@ -150,7 +149,7 @@ class AnthropicAssistant:
         self.model_name = model_name if model_name else "claude-3-haiku-20240307"
         self.client = anthropic.Anthropic()
         self.tb = tb
-        self.tool_schemas = tb.anthropic_schemas if tb else []
+        self.tool_schemas = tb.anthropic_schemas
         self.messages: list[dict] = []
         self.max_tokens = 4096
 
