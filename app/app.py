@@ -1,6 +1,7 @@
 import sys
 import uuid
 import os
+import time
 from flask import Flask, render_template, request, session, redirect, url_for
 from flask_socketio import SocketIO, emit, join_room
 
@@ -48,22 +49,35 @@ def initialize_assistant(session_id, story_name):
         #model_name = "gpt-4.5-preview",
         tb=dm_tb,
         instructions=model_instruction,
-        callbacks=web_handler
+        callback_handler=web_handler
     )
-    
-    # Add the full instruction message
-    asst.addUserMessage(getFullInstructionMessage())
     
     # Store the assistant and web handler in active sessions (initialized = False)
     assistant_sessions[session_id] = {
-        'assistant': asst,
-        'story': story_name,
-        'web_handler': web_handler,
-        'initialized': False
+            'assistant': asst,
+            'story': story_name,
+            'web_handler': web_handler,
+            'initialized': False
     }
-    
-    # Run initial setup
+
+    save_path = f"./stories/{story_name}/history.json"
+    if asst.load(save_path):
+        last_message = asst.messages[-1]['content'][-1]['text']
+        if debug():
+            print(bold, cyan, f"Loaded existing history file for story", endc)
+            print(bold, cyan, f"last message was: {last_message}", endc)
+        assistant_sessions[session_id]['initialized'] = True
+        socketio.emit('assistant_ready', room=session_id)
+        web_handler.turn_end()
+        time.sleep(0.3)
+        asst.cb.text_output(last_message)
+        return session_id
+
+
+    if debug(): print(bold, cyan, f"Created new history file", endc)
+    asst.addUserMessage(getFullInstructionMessage())
     asst.run()
+    asst.save(save_path)
     
     # Call turn_end_callback manually
     web_handler.turn_end()
@@ -165,6 +179,7 @@ def handle_user_message(data):
     
     # Process with assistant
     asst.run()
+    asst.save(f"./stories/{assistant_sessions[session_id]['story']}/history.json")
     
     # Call turn_end_callback manually
     if session_id in assistant_sessions and 'web_handler' in assistant_sessions[session_id]:
@@ -177,4 +192,4 @@ def handle_request_stories():
     emit('story_list_update', {'stories': stories})
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True, host='0.0.0.0', port=5000)
+    socketio.run(app, debug=False, host='0.0.0.0', port=5000)

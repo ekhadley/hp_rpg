@@ -59,6 +59,12 @@ class OpenAIAssistant:
             else:
                 content_str = content
             print(color, f"{role.capitalize()}: {content_str}")
+        
+    def getLastMessageContent(self) -> str:
+        messages = self.getMessages()
+        if len(messages.data) > 0:
+            return messages.data[0].content[-1].text.value
+        return ""
     
     def printMessagesRaw(self) -> None:
         print(json.dumps(self.getMessages().to_dict(), indent=4))
@@ -78,15 +84,17 @@ class OpenAIAssistant:
                 f.seek(0)
                 json.dump(data, f)
 
-    def load(self, path: str) -> None:
-        with json.load(path) as f:
-            self.thread_id = f['thread_id']
-            self.assistant_id = f['assistant_id']
-        self.assistant = openai.beta.assistants.retrieve(self.assistant_id)
-        self.thread = openai.beta.threads.retrieve(self.thread_id)
-    def tryLoad(self, path: str) -> None:
+    def load(self, path: str) -> bool:
         if os.path.exists(path):
-            self.load(path)
+            with open(path, "r") as f:
+                j = json.load(f)
+                if "thread_id" in j:
+                    self.thread_id = j['thread_id']
+                    self.assistant_id = j['assistant_id']
+                    self.assistant = openai.beta.assistants.retrieve(self.assistant_id)
+                    self.thread = openai.beta.threads.retrieve(self.thread_id)
+                    return True
+        return False
 
     def addUserMessage(self, prompt:str) -> None:
         openai.beta.threads.messages.create(
@@ -197,6 +205,11 @@ class AnthropicAssistant:
             
     def printMessagesRaw(self) -> None:
         print(json.dumps(self.messages, indent=4))
+    
+    def getLastMessageContent(self) -> str:
+        if self.messages:
+            return self.messages[-1]["content"][-1]['text']
+        return ""
 
     def save(self, path: str) -> None: # for anthropic we just save the raw messages
         if not os.path.exists(path):
@@ -208,13 +221,14 @@ class AnthropicAssistant:
                 data["messages"] = self.messages
                 f.seek(0)
                 json.dump(data, f)
-    def load(self, path: str) -> None:
-        with open(path) as f:
-            data = json.load(f)
-            self.messages = data["messages"]
-    def tryLoad(self, path: str) -> None:
+    def load(self, path: str) -> bool:
         if os.path.exists(path):
-            self.load(path)
+            with open(path) as f:
+                data = json.load(f)
+                if "messages" in data:
+                    self.messages = data["messages"]
+                    return True
+        return False
     
     def addUserMessage(self, content) -> None:
         self.messages.append({"role": "user", "content": content})

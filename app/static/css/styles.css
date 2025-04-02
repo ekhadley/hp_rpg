@@ -276,11 +276,13 @@ body {
     padding: 0.5em 0;
     margin: 0.75em 0;
     padding-left: 1em;
+    border-left: none;
 }
 
 .book-narration p {
     text-indent: 2em;
     margin-bottom: 0.7em;
+    border-left: none;
 }
 
 .book-narration p:first-child {

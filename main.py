@@ -28,6 +28,8 @@ def loadIntoStory():
     else:
         model_tools.current_story = current_story = stories[choice-1]
 
+def historyPath():
+    return f"./stories/{current_story}/history.json"
 
 # TODO:
 # - token counting and appropriate warnings.
@@ -46,18 +48,27 @@ if __name__ == "__main__":
         model_tools.summarize_story_tool_handler
     ])
     asst = Assistant(
-        model_name = "claude-3-7-sonnet-20250219",
-        #model_name = "claude-3-haiku-20240307",
+        #model_name = "claude-3-7-sonnet-20250219",
+        model_name = "claude-3-haiku-20240307",
         #model_name = "gpt-4o-mini",
         #model_name = "gpt-4o-",
         tb = dm_tb,
         instructions = model_instruction,
         callback_handler = callbacks.TerminalPrinter()
     )
-    asst.addUserMessage(getFullInstructionMessage())
-    asst.run()
+
+    if asst.load(historyPath()):
+        last_message = asst.getLastMessageContent()
+        if debug():
+            print(bold, cyan, f"Loaded existing history file for story", endc)
+            print(bold, cyan, f"last message was: {last_message}", endc)
+        asst.cb.text_output(last_message)
+    else:
+        if debug(): print(bold, cyan, f"No conversation history found", endc)
+        asst.addUserMessage(getFullInstructionMessage())
+        asst.run()
 
     while True:
+        asst.save(historyPath())
         asst.addUserMessage(input("\n > "))
         asst.run()
-        asst.save()

@@ -153,7 +153,11 @@ socket.on('assistant_text', function(data) {
         accumulatedContent += data.text;
 
         // Special processing for narration tags
+        // if processedContesnt has a start narration tag but no end, add a closing tag
         let processedContent = accumulatedContent;
+        if (processedContent.includes('<narration>') && !processedContent.includes('</narration>')) {
+            processedContent += '</narration>';
+        }
         processedContent = processedContent.replace(/<narration>(.*?)<\/narration>/gs, function(_, narrationContent) {
             // Clean up the narration text first
             let narrationText = narrationContent;
@@ -173,10 +177,6 @@ socket.on('assistant_text', function(data) {
             
             return '<div class="book-narration">' + formattedNarration + '</div>';
         });
-        // if processedContesnt has a start narration tag but no end, add a closing tag
-        if (processedContent.includes('<narration>') && !processedContent.includes('</narration>')) {
-            processedContent += '</narration>';
-        }
         
         // Convert accumulated markdown to HTML - using the FULL accumulated content each time
         try {
