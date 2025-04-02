@@ -65,7 +65,7 @@ class OpenAIAssistant:
     
     def save(self, path: str) -> None:
         if not os.path.exists(path):
-            with open(path, "w") as f:
+            with open(path, "w+") as f:
                 json.dump({
                     "thread_id": self.thread_id,
                     "assistant_id": self.assistant_id
@@ -77,13 +77,16 @@ class OpenAIAssistant:
                 data["assistant_id"] = self.assistant_id
                 f.seek(0)
                 json.dump(data, f)
-    
+
     def load(self, path: str) -> None:
         with json.load(path) as f:
             self.thread_id = f['thread_id']
             self.assistant_id = f['assistant_id']
         self.assistant = openai.beta.assistants.retrieve(self.assistant_id)
         self.thread = openai.beta.threads.retrieve(self.thread_id)
+    def tryLoad(self, path: str) -> None:
+        if os.path.exists(path):
+            self.load(path)
 
     def addUserMessage(self, prompt:str) -> None:
         openai.beta.threads.messages.create(
@@ -113,9 +116,11 @@ class OpenAIAssistant:
         tool_submit_required = False
         for event in stream:
             if event.event == "thread.message.delta":
-                tokens = "".join([block.text.value for block in event.data.delta.content])
-                if debug(): print(yellow, f"Assistant: {tokens}", endc)
-                self.cb.text_output(text=tokens)
+                if debug():
+                    tokens = "".join([block.text.value for block in event.data.delta.content])
+                    print(yellow, f"Assistant: {tokens}", endc)
+                for block in event.data.delta.content:
+                    self.cb.text_output(text=block.text.value)
             elif event.event == "thread.run.requires_action":
                 tool_submit_required = True
                 required_outputs = event.data.required_action.submit_tool_outputs.tool_calls
@@ -192,6 +197,24 @@ class AnthropicAssistant:
             
     def printMessagesRaw(self) -> None:
         print(json.dumps(self.messages, indent=4))
+
+    def save(self, path: str) -> None: # for anthropic we just save the raw messages
+        if not os.path.exists(path):
+            with open(path, "w+") as f:
+                json.dump({"messages": self.messages}, f)
+        else:
+            with open(path, "r+") as f:
+                data = json.load(f)
+                data["messages"] = self.messages
+                f.seek(0)
+                json.dump(data, f)
+    def load(self, path: str) -> None:
+        with open(path) as f:
+            data = json.load(f)
+            self.messages = data["messages"]
+    def tryLoad(self, path: str) -> None:
+        if os.path.exists(path):
+            self.load(path)
     
     def addUserMessage(self, content) -> None:
         self.messages.append({"role": "user", "content": content})
