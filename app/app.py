@@ -8,7 +8,7 @@ from flask_socketio import SocketIO, emit, join_room
 # Add parent directory to path to import from main project
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from web_callbacks import WebCallbackHandler
+from callbacks import WebCallbackHandler
 from api import Assistant
 import model_tools
 from model_tools import Toolbox, getFullInstructionMessage
@@ -62,7 +62,7 @@ def initialize_assistant(session_id, story_name):
 
     save_path = f"./stories/{story_name}/history.json"
     if asst.load(save_path):
-        last_message = asst.messages[-1]['content'][-1]['text']
+        last_message = asst.messages[-1]['content'][-1]['text'] # loading and saving for anthropic models only
         if debug():
             print(bold, cyan, f"Loaded existing history file for story", endc)
             print(bold, cyan, f"last message was: {last_message}", endc)

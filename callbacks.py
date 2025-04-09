@@ -48,7 +48,7 @@ class TerminalPrinter(CallbackHandler): # streams text into the terminal in nice
 
 
 
-class WebCallbackHandler:
+class WebCallbackHandler(CallbackHandler):
     def __init__(self, socketio, session_id):
         #self.asst = None
         self.socketio = socketio
