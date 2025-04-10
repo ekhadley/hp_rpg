@@ -42,9 +42,9 @@ def initialize_assistant(session_id, story_name):
     
     web_handler = WebCallbackHandler(socketio, session_id)
     asst = Assistant(
-        model_name = "claude-3-7-sonnet-20250219",
+        #model_name = "claude-3-7-sonnet-20250219",
         #model_name = "claude-3-haiku-20240307",
-        #model_name = "gpt-4o",
+        model_name = "gpt-4o",
         #model_name = "gpt-4o-mini",
         #model_name = "gpt-4.5-preview",
         tb=dm_tb,
@@ -59,10 +59,11 @@ def initialize_assistant(session_id, story_name):
             'web_handler': web_handler,
             'initialized': False
     }
-
     save_path = f"./stories/{story_name}/history.json"
+
+    """ # kind of works for loading and saving for anthropic models
     if asst.load(save_path):
-        last_message = asst.messages[-1]['content'][-1]['text'] # loading and saving for anthropic models only
+        last_message = asst.messages[-1]['content'][-1]['text'] 
         if debug():
             print(bold, cyan, f"Loaded existing history file for story", endc)
             print(bold, cyan, f"last message was: {last_message}", endc)
@@ -72,6 +73,7 @@ def initialize_assistant(session_id, story_name):
         time.sleep(0.3)
         asst.cb.text_output(last_message)
         return session_id
+    """
 
 
     if debug(): print(bold, cyan, f"Created new history file", endc)
