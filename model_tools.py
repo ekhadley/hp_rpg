@@ -161,7 +161,7 @@ def write_story_file_tool_handler(file_name: str, contents: str) -> str:
     return "File saved successfully."
 
 def summarize_story_tool_handler(contents: str) -> str:
-    """summarize_story: This will OVERWRITE the contents of the story_summary.md file with the contents provided. Any information in the file will be lost. ONLY use this tool on user request. The contents you write should contain any and every piece of information which could be necessary for continuing the story, as seamlessly as possible. Use many details. It is ok to include irrelevant information, but it is not ok to leave out relevant information. If it exists, you may want to read the current contents of the story summary, so you can replace it with an edited or appended version.
+    """summarize_story: This will OVERWRITE the contents of the story_summary.md file with the contents provided. Any information in the file will be lost. ONLY use this tool on user request. The contents you write should contain any and every piece of information which could be necessary for continuing the story, as seamlessly as possible. Use many details. If you have not already, you should read the current story summary, so you can replace it with an edited or appended version.
     contents (string): The contents to write to the story summary file. Do not include backticks around the contents to be saved.
     """
     with open(f"./stories/{current_story}/story_summary.md", 'w') as file:
@@ -201,9 +201,14 @@ def roll_dice_tool_handler(dice: str) -> int:
     rolls = [random.randint(1, sides) for _ in range(num)]
     return sum(rolls)
 
-def getFullInstructionMessage() -> str:
-    """read_character_creation_guide: Lets you view the contents of the file concerning the character creation guide. You should use this tool whenever the user asks you to create a chracter sheet.
+def readStoryPlanningGuide() -> str:
+    """read_story_planning_guide: Read the contents of the story planning guide, instructing you how to create a secret story planning document. Use this only when the user asks you to start a new story.
     """
+    with open("planning_guide.md", 'r') as file:
+        content = file.read()
+    return content
+
+def getFullInstructionMessage() -> str:
     with open("instructions.md", 'r') as file:
         content = file.read()
     return content

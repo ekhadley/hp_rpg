@@ -44,9 +44,9 @@ def initialize_assistant(session_id, story_name):
     asst = Assistant(
         #model_name = "claude-3-7-sonnet-20250219",
         #model_name = "claude-3-haiku-20240307",
-        model_name = "gpt-4o",
+        #model_name = "gpt-4o",
         #model_name = "gpt-4o-mini",
-        #model_name = "gpt-4.5-preview",
+        model_name = "gpt-4.1-2025-04-14",
         tb=dm_tb,
         instructions=model_instruction,
         callback_handler=web_handler
