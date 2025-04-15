@@ -302,16 +302,11 @@ def Assistant(
         )
 
 if __name__ == "__main__":
-    basic_tb = Toolbox([
-        model_tools.list_directory_tool_handler,
-        model_tools.read_file_tool_handler,
-        model_tools.random_number_tool_handler
-    ])
 
     asst = Assistant(
         #model_name = "claude-3-7-sonnet-20250219",
         model_name = "claude-3-haiku-20240307",
-        tb = basic_tb,
+        tb = model_tools.basic_tb,
         instructions = "You are a helpful assistant that can use tools.",
         callback_handler = callbacks.TerminalPrinter()
     )

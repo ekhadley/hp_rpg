@@ -105,6 +105,9 @@ class Toolbox:
         else:
             return f"error: Tool {tool_name} not found."
 
+
+
+
 # Tool handlers
 # descriptions and argument properties are parsed automatically from the docstring.
 # They have to be formatted exactly like this.
@@ -148,7 +151,7 @@ def read_story_file_tool_handler(file_name: str) -> str:
     return content
 
 def write_story_file_tool_handler(file_name: str, contents: str) -> str:
-    """write_file: Create a file in the current story directory with the given name and contents. This tool will fail if the file already exists. Only use this tool when you have the full contents prepareed. Files cannot be edited later, only appended to.
+    """write_file: Create a file in the current story directory with the given name and contents. This tool will fail if the file already exists.
     file_name (string): Name of the file to save to. Should be a markdown file, ending in '.md'. Should not be a part of any subfolder.
     contents (string): The contents to write to the file. Do not include backticks around the contents to be saved.
     """
@@ -161,7 +164,7 @@ def write_story_file_tool_handler(file_name: str, contents: str) -> str:
     return "File saved successfully."
 
 def summarize_story_tool_handler(contents: str) -> str:
-    """summarize_story: This will OVERWRITE the contents of the story_summary.md file with the contents provided. Any information in the file will be lost. ONLY use this tool on user request. The contents you write should contain any and every piece of information which could be necessary for continuing the story, as seamlessly as possible. Use many details. If you have not already, you should read the current story summary, so you can replace it with an edited or appended version.
+    """summarize_story: This will overwrite the contents of the story_summary.md file with the contents provided. The contents you write should contain any and every piece of information which could be necessary for continuing the story, as seamlessly as possible. Use many details. If you have not already, you should read the current story summary, so you can replace it with an edited or appended version.
     contents (string): The contents to write to the story summary file. Do not include backticks around the contents to be saved.
     """
     with open(f"./stories/{current_story}/story_summary.md", 'w') as file:
@@ -169,15 +172,29 @@ def summarize_story_tool_handler(contents: str) -> str:
     return "Story summary saved successfully."
 
 def read_story_summary_tool_handler() -> str:
-    """read_story_summary: Read the contents of the story summary file (story_summary.md) in the current story directory.
+    """read_story_summary: Read the story summary file (story_summary.md) in the current story directory.
     """
     with open(f"./stories/{current_story}/story_summary.md", 'r') as file:
         content = file.read()
     return content
 
+def read_story_plan_tool_handler() -> str:
+    """read_story_plan: Read the story plan file, laying out the behind-the-scenes architecture of the current story.
+    """
+    with open(f"./stories/{current_story}/story_plan.md", 'r') as file:
+        content = file.read()
+    return content
+
+def read_story_planning_guide() -> str:
+    """read_story_planning_guide: Read the story planning guide, instructing you how to create a story plan. Only use this if story_plan.md does not alredy exist.
+    """
+    with open(f"./planning_guide.md", 'r') as file:
+        content = file.read()
+    return content
+
 def roll_dice_tool_handler(dice: str) -> int:
     """roll_dice: Roll a set of dice with the given number of sides and return the sum of the rolls.
-    dice (string): A string describing the set of dice to roll, of the form 'dX' or 'XdY'. Y is the number of sides on the dice, X is the number of times to roll. If no X is provided, it defaults to 1.
+    dice (string): A string describing the set of dice to roll, of the form 'dX' or 'XdY'.
     """
     dice = dice.lower()
     num, sides = dice.strip().split('d')
@@ -201,14 +218,26 @@ def roll_dice_tool_handler(dice: str) -> int:
     rolls = [random.randint(1, sides) for _ in range(num)]
     return sum(rolls)
 
-def readStoryPlanningGuide() -> str:
-    """read_story_planning_guide: Read the contents of the story planning guide, instructing you how to create a secret story planning document. Use this only when the user asks you to start a new story.
-    """
-    with open("planning_guide.md", 'r') as file:
-        content = file.read()
-    return content
-
+# not an actual handler
 def getFullInstructionMessage() -> str:
     with open("instructions.md", 'r') as file:
         content = file.read()
     return content
+
+# some predefined toolboxes
+dm_tb = Toolbox([ # for actually playing the game
+    read_story_planning_guide,
+    read_story_plan_tool_handler,
+    read_story_summary_tool_handler,
+    summarize_story_tool_handler,
+    list_story_files_tool_handler,
+    write_story_file_tool_handler,
+    read_story_file_tool_handler,
+    roll_dice_tool_handler,
+])
+
+basic_tb = Toolbox([ # demo
+    list_directory_tool_handler,
+    read_file_tool_handler,
+    random_number_tool_handler
+])

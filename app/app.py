@@ -31,14 +31,6 @@ def initialize_assistant(session_id, story_name):
     model_tools.current_story = story_name
     
     # Create toolbox with the same tools as in main.py
-    dm_tb = Toolbox([
-        model_tools.roll_dice_tool_handler,
-        model_tools.read_story_file_tool_handler,
-        model_tools.list_story_files_tool_handler,
-        model_tools.write_story_file_tool_handler,
-        model_tools.read_story_summary_tool_handler,
-        model_tools.summarize_story_tool_handler
-    ])
     
     web_handler = WebCallbackHandler(socketio, session_id)
     asst = Assistant(
@@ -47,7 +39,7 @@ def initialize_assistant(session_id, story_name):
         #model_name = "gpt-4o",
         #model_name = "gpt-4o-mini",
         model_name = "gpt-4.1-2025-04-14",
-        tb=dm_tb,
+        tb=model_tools.dm_tb,
         instructions=model_instruction,
         callback_handler=web_handler
     )

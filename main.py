@@ -39,20 +39,12 @@ if __name__ == "__main__":
     loadIntoStory()
     print(f"story selected: {current_story}")
 
-    dm_tb = Toolbox([
-        model_tools.roll_dice_tool_handler,
-        model_tools.read_story_file_tool_handler,
-        model_tools.list_story_files_tool_handler,
-        model_tools.write_story_file_tool_handler,
-        model_tools.read_story_summary_tool_handler,
-        model_tools.summarize_story_tool_handler
-    ])
     asst = Assistant(
         #model_name = "claude-3-7-sonnet-20250219",
         model_name = "claude-3-haiku-20240307",
         #model_name = "gpt-4o-mini",
         #model_name = "gpt-4o-",
-        tb = dm_tb,
+        tb = model_tools.dm_tb,
         instructions = model_instruction,
         callback_handler = callbacks.TerminalPrinter()
     )
