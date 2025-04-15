@@ -38,7 +38,7 @@ def initialize_assistant(session_id, story_name):
         #model_name = "claude-3-haiku-20240307",
         #model_name = "gpt-4o",
         #model_name = "gpt-4o-mini",
-        model_name = "gpt-4.1-2025-04-14",
+        model_name = "gpt-4.1",
         tb=model_tools.dm_tb,
         instructions=model_instruction,
         callback_handler=web_handler
@@ -53,35 +53,24 @@ def initialize_assistant(session_id, story_name):
     }
     save_path = f"./stories/{story_name}/history.json"
 
-    """ # kind of works for loading and saving for anthropic models
-    if asst.load(save_path):
-        last_message = asst.messages[-1]['content'][-1]['text'] 
+    if asst.load(save_path): # returns true if successfully loaded
+        last_message_content = asst.getLastMessageContent()
         if debug():
             print(bold, cyan, f"Loaded existing history file for story", endc)
-            print(bold, cyan, f"last message was: {last_message}", endc)
+            print(bold, cyan, f"last message was: {last_message_content}", endc)
         assistant_sessions[session_id]['initialized'] = True
-        socketio.emit('assistant_ready', room=session_id)
+        socketio.emit('assistant_ready', room=session_id) # have to emit before we output so page can load
         web_handler.turn_end()
         time.sleep(0.3)
-        asst.cb.text_output(last_message)
-        return session_id
-    """
-
-
-    if debug(): print(bold, cyan, f"Created new history file", endc)
-    asst.addUserMessage(getFullInstructionMessage())
-    asst.run()
-    asst.save(save_path)
-    
-    # Call turn_end_callback manually
-    web_handler.turn_end()
-    
-    # Mark as initialized
-    assistant_sessions[session_id]['initialized'] = True
-    
-    # Send an event that assistant is ready
-    socketio.emit('assistant_ready', room=session_id)
-    
+        asst.cb.text_output(last_message_content)
+    else:
+        if debug(): print(bold, cyan, f"Created new history file", endc)
+        asst.addUserMessage(getFullInstructionMessage())
+        asst.run()
+        asst.save(save_path)
+        web_handler.turn_end()
+        assistant_sessions[session_id]['initialized'] = True
+        socketio.emit('assistant_ready', room=session_id)
     return session_id
 
 # Routes

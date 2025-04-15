@@ -11,6 +11,45 @@ import callbacks
 from callbacks import CallbackHandler
 
 
+{
+    "role": "assistant",
+    "content": [
+        {
+            "citations": None,
+            "text": "Excellent, the story plan is now in place. Let's move on to summarizing the current state of the story.",
+            "type": "text"
+        },
+        {
+            "id": "toolu_01VMHazWdjF9CfSL9fLAq7D6",
+            "input": {
+                "contents": "Alex, a [PC_YEAR] year student at Hogwarts School of Witchcraft and Wizardry, has become embroiled in a growing mystery surrounding strange occurrences at the castle. Unexplained noises, moving objects, and a general sense of unease have been reported by both students and staff.\n\nAs Alex investigates these disturbances, they begin to suspect that the Defense Against the Dark Arts professor, [PROF_NAME], is somehow involved. [PROF_NAME] has been acting increasingly erratic and withdrawn, avoiding questions and appearing preoccupied.\n\nFurther research into Hogwarts' history has revealed a dark incident from decades ago, when a powerful Dark artifact was rumored to have been hidden somewhere on the school grounds. It seems [PROF_NAME] may be searching for this artifact, though their true motives remain unclear.\n\nThe strange events have only escalated, putting the students and staff in danger. Alex must now work quickly to uncover the truth, rally allies, and confront [PROF_NAME] before they can harness the power of the Dark artifact for their own nefarious purposes. The fate of Hogwarts hangs in the balance."
+                },
+            "name": "summarize_story", "type": "tool_use"
+        }
+        ]
+},
+
+{
+    'role': 'assistant',
+    'content': [
+        {
+            'text': {
+                'annotations': [],
+                'value': 'Excellent! Let’s begin crafting your Hogwarts student.\n\n### Step 1: Character Basics\n\n1. **Name:** What is your character’s full name?\n2. **Year at Hogwarts:** Are you starting as a First Year, or would you like to begin at a higher year (up to 7)?\n3. **House:** Gryffindor, Hufflepuff, Ravenclaw, or Slytherin?\n4. **Background:** If you have ideas about your family, upbringing, and personality, share as much as you like—or I can provide prompts as we go.\n\nPlease start by telling me your character’s name, desired starting year, and which house you’d like to belong to. After that, we’ll pick your stats, proficiencies, and spell preferences!'
+                },
+                'type': 'text'
+        }
+        ],
+    'id': 'msg_njwfami7ZJqXTQtM2VgKYfOi',
+    'assistant_id': 'asst_J73pD5GQAYVBUsIagQlJw6bV',
+    'attachments': [],
+    'created_at': 1744743586,
+    'metadata': {},
+    'object': 'thread.message',
+    'run_id': 'run_1jppGzR0FQPkSooxPZ4gRQ4l',
+    'thread_id': 'thread_kKoECRUhXY1J2sU26arTCMZ6'
+}
+
 class OpenAIAssistant:
     def __init__(
             self,
@@ -33,6 +72,9 @@ class OpenAIAssistant:
 
         self.cb = callback_handler
     
+    def getLastMessageContent(self) -> str:
+        return self.getMessages().data[0].content[-1].text.value
+        
     def getMessages(self):
         return openai.beta.threads.messages.list(self.thread_id)
     
@@ -125,8 +167,10 @@ class OpenAIAssistant:
         for event in stream:
             if event.event == "thread.message.delta":
                 if debug():
-                    tokens = "".join([block.text.value for block in event.data.delta.content])
-                    print(yellow, f"Assistant: {tokens}", endc)
+                    text_blocks = [block.text.value for block in event.data.delta.content]
+                    if len(text_blocks) > 0:
+                        tokens = "".join([block.text.value for block in event.data.delta.content])
+                        #print(yellow, f"Assistant: {tokens}", endc)
                 for block in event.data.delta.content:
                     self.cb.text_output(text=block.text.value)
             elif event.event == "thread.run.requires_action":

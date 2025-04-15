@@ -151,20 +151,20 @@ def read_story_file_tool_handler(file_name: str) -> str:
     return content
 
 def write_story_file_tool_handler(file_name: str, contents: str) -> str:
-    """write_file: Create a file in the current story directory with the given name and contents. This tool will fail if the file already exists.
+    """write_file: Create or overwrite a file in the current story directory with the given name and contents. The contents of the file, if it exists, will be deleted permanently. If editing a file, you should read the file first, then write the edited or extended version after.
     file_name (string): Name of the file to save to. Should be a markdown file, ending in '.md'. Should not be a part of any subfolder.
     contents (string): The contents to write to the file. Do not include backticks around the contents to be saved.
     """
     if not file_name.endswith(".md"):
         file_name += ".md"
-    if os.path.exists(f"./stories/{current_story}/{file_name}"):
-        raise ValueError("File already exists.")
+    exists = os.path.exists(f"./stories/{current_story}/{file_name}")
     with open(f"./stories/{current_story}/{file_name}", 'w') as file:
         file.write(contents)
-    return "File saved successfully."
+    if exists: return "File edited successfully."
+    else: return "File saved successfully."
 
-def summarize_story_tool_handler(contents: str) -> str:
-    """summarize_story: This will overwrite the contents of the story_summary.md file with the contents provided. The contents you write should contain any and every piece of information which could be necessary for continuing the story, as seamlessly as possible. Use many details. If you have not already, you should read the current story summary, so you can replace it with an edited or appended version.
+def _summarize_story_tool_handler(contents: str) -> str:
+    """summarize_story: This will overwrite the contents of the story_summary.md file with the contents provided. 
     contents (string): The contents to write to the story summary file. Do not include backticks around the contents to be saved.
     """
     with open(f"./stories/{current_story}/story_summary.md", 'w') as file:
@@ -229,7 +229,6 @@ dm_tb = Toolbox([ # for actually playing the game
     read_story_planning_guide,
     read_story_plan_tool_handler,
     read_story_summary_tool_handler,
-    summarize_story_tool_handler,
     list_story_files_tool_handler,
     write_story_file_tool_handler,
     read_story_file_tool_handler,
@@ -241,3 +240,5 @@ basic_tb = Toolbox([ # demo
     read_file_tool_handler,
     random_number_tool_handler
 ])
+"""
+"""
