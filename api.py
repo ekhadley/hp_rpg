@@ -164,13 +164,12 @@ class OpenAIAssistant:
 
     def runStream(self, stream,) -> None:
         tool_submit_required = False
+        currently_outputting_text = False
         for event in stream:
             if event.event == "thread.message.delta":
-                if debug():
-                    text_blocks = [block.text.value for block in event.data.delta.content]
-                    if len(text_blocks) > 0:
-                        tokens = "".join([block.text.value for block in event.data.delta.content])
-                        #print(yellow, f"Assistant: {tokens}", endc)
+                if debug() and not currently_outputting_text:
+                        print(yellow, "Assistant producing text. . .", endc)
+                        currently_outputting_text = True
                 for block in event.data.delta.content:
                     self.cb.text_output(text=block.text.value)
             elif event.event == "thread.run.requires_action":
@@ -192,14 +191,13 @@ class OpenAIAssistant:
                         "tool_call_id": tool_id,
                         "output": result
                     })
-            else:
-                if debug():
-                    if event.event == "thread.run.failed":
-                        print(bold, red, f"ERROR: RUN FAILED:\n")
-                        print(event.to_dict())
-                    else:
-                        print(event.event)
-
+            elif debug():
+                if event.event == "thread.run.failed":
+                    print(bold, red, f"ERROR: RUN FAILED:\n")
+                    print(event.to_dict())
+                if currently_outputting_text:
+                    print(red, "Assistant finished producing text.", endc)
+                    currently_outputting_text = False
         stream.close()
         if tool_submit_required:
             self.cb.tool_submit(names=tool_names, inputs=tool_inputss, results=[r['output'] for r in tool_outputs])
@@ -284,9 +282,12 @@ class AnthropicAssistant:
 
     def run(self) -> str: 
         with self.getStream() as stream:
+            currently_outputting_text = False
             for event in stream:
                 if event.type == "text":
-                    if debug(): print(yellow, f"Assistant: {event.text}", endc)
+                    if debug() and not currently_outputting_text:
+                        print(yellow, "Assistant producing text. . .", endc)
+                        currently_outputting_text = True
                     self.cb.text_output(text=event.text)
                 elif event.type == "message_stop":
                     self.addAssistantMessage([block.to_dict() for block in event.message.content])
@@ -312,9 +313,10 @@ class AnthropicAssistant:
                         self.cb.tool_submit(names=tool_names, inputs=tool_inputss, results=[r['content'] for r in tool_results])
                         self.addUserMessage(tool_results)
                         self.run()
-                        #return
-                else:
-                    if debug(): print(red, "event: ", endc, event)
+                elif debug():
+                    if currently_outputting_text:
+                        print(red, "Assistant finished producing text.", endc)
+                        currently_outputting_text = False
 
 
 

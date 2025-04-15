@@ -60,9 +60,9 @@ def initialize_assistant(session_id, story_name):
             print(bold, cyan, f"last message was: {last_message_content}", endc)
         assistant_sessions[session_id]['initialized'] = True
         socketio.emit('assistant_ready', room=session_id) # have to emit before we output so page can load
-        web_handler.turn_end()
         time.sleep(0.3)
         asst.cb.text_output(last_message_content)
+        #web_handler.turn_end()
     else:
         if debug(): print(bold, cyan, f"Created new history file", endc)
         asst.addUserMessage(getFullInstructionMessage())
