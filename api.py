@@ -9,8 +9,30 @@ import model_tools
 from model_tools import Toolbox
 import callbacks
 from callbacks import CallbackHandler
+from abc import ABC, abstractmethod
 
-class OpenAIAssistant:
+
+class Assistant:
+    def __init__( self, model_name: str, toolbox: Toolbox, instructions: str, callback_handler: CallbackHandler):
+        pass
+    def printMessages(self) -> None:
+        pass
+    def getLastMessageContent(self) -> str:
+        pass
+    def printMessagesRaw(self) -> None:
+        pass
+    def save(self, path: str) -> None:
+        pass
+    def load(self, path: str) -> bool:
+        pass
+    def addUserMessage(self, content) -> None:
+        pass
+    def getStream(self):
+        pass
+    def run(self) -> None:
+        pass
+
+class OpenAIAssistant(Assistant):
     def __init__(
             self,
             model_name: str,
@@ -18,7 +40,7 @@ class OpenAIAssistant:
             instructions: str,
             callback_handler: CallbackHandler,
         ):
-        self.model_name = model_name if model_name else "gpt-4o-mini"
+        self.model_name = model_name
         self.tb = toolbox
         self.tool_schemas = self.tb.openai_schemas
         self.assistant = openai.beta.assistants.create(
@@ -163,7 +185,7 @@ class OpenAIAssistant:
             self.cb.tool_submit(names=tool_names, inputs=tool_inputss, results=[r['output'] for r in tool_outputs])
             self.runStream(self.submitToolOutputs(event.data.id, tool_outputs))
 
-class AnthropicAssistant:
+class AnthropicAssistant(Assistant):
     def __init__(
             self,
             model_name: str,
@@ -171,7 +193,7 @@ class AnthropicAssistant:
             instructions: str,
             callback_handler: CallbackHandler,
         ):
-        self.model_name = model_name if model_name else "claude-3-haiku-20240307"
+        self.model_name = model_name
         self.client = anthropic.Anthropic()
         self.tb = toolbox
         self.tool_schemas = self.tb.anthropic_schemas
@@ -281,32 +303,57 @@ class AnthropicAssistant:
         self.cb.turn_end()
 
 
+class GoogleAssistant(Assistant):
+    def __init__(
+            self,
+            model_name: str,
+            toolbox: Toolbox,
+            instructions: str,
+            callback_handler: CallbackHandler,
+        ):
+        self.model_name = model_name if model_name else "gemini-1.5"
+        self.tb = toolbox
+        self.tool_schemas = self.tb.google_schemas
+        self.assistant = openai.beta.assistants.create(
+            instructions = instructions,
+            model = self.model_name,
+            tools = self.tool_schemas
+        )
+        self.assistant_id = self.assistant.id
+        self.thread = openai.beta.threads.create()
+        self.thread_id = self.thread.id
+
+        self.cb = callback_handler
+
+
+model_name_providers = {
+    "claude": AnthropicAssistant,
+    "opus": AnthropicAssistant,
+    "sonnet": AnthropicAssistant,
+    "haiku": AnthropicAssistant,
+    "gpt": OpenAIAssistant,
+    "o1": OpenAIAssistant,
+    "o3": OpenAIAssistant,
+    #"gemini": GoogleAssistant,
+    #"gemma": GoogleAssistant,
+}
+def selectAssistantType(model_name: str) -> Assistant:
+    for key in model_name_providers:
+        if key in model_name:
+            return model_name_providers[key]
+
 def Assistant(
     model_name:str,
     toolbox:Toolbox,
     instructions,
     callback_handler: CallbackHandler = CallbackHandler(),
-) -> OpenAIAssistant|AnthropicAssistant:
-
-    is_openai_model_name = "gpt" in model_name
-    if is_openai_model_name and os.getenv("PROVIDER") == "anthropic":
-        raise ValueError(red, bold, "env variable PROVIDER set to anthropic, but model name is openai")
-    elif is_openai_model_name:
-        if debug(): print(yellow, f"creating OpenAIAssistant with model '{model_name}'", endc)
-        return OpenAIAssistant(
-            model_name,
-            toolbox,
-            instructions,
-            callback_handler
-        )
-    else:
-        if debug(): print(yellow, f"creating AnthropicAssistant with model '{model_name}'", endc)
-        return AnthropicAssistant(
-            model_name,
-            toolbox,
-            instructions,
-            callback_handler
-        )
+) -> Assistant:
+    AssistantType = selectAssistantType(model_name)
+    if AssistantType == None:
+        raise ValueError(f"Unknown model name: {model_name}")
+    if debug():
+        print(green, f"Creating assistant of type {AssistantType.__name__} with model {model_name}", endc)
+    return AssistantType(model_name, toolbox, instructions, callback_handler)
 
 if __name__ == "__main__":
     basic_tb = Toolbox([ # demo
