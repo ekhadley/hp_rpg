@@ -1,7 +1,5 @@
 import time
-
-import socketio
-
+from flask_socketio import SocketIO
 from utils import *
 
 # each type of callback is given these exact arguments as keywords
@@ -47,13 +45,27 @@ class TerminalPrinter(CallbackHandler): # streams text into the terminal in nice
         self.narrating = False
 
 class WebCallbackHandler(CallbackHandler):
-    def __init__(self):
-        pass
+    def __init__(self, socket: SocketIO):
+        self.socket = socket
+        self.outputting_text = False
+
     def text_output(self, text):
-        pass
+        if not self.outputting_text:
+            self.outputting_text = True
+            self.socket.emit('text_start')
+        self.emit('text_output', text=text)
+
     def tool_request(self, name:str, inputs: dict):
-        pass
+        self.outputting_text = False
+        self.emit('tool_request', name=name, inputs=inputs)
+
     def tool_submit(self, names: list[str], inputs: list[dict], results: list[str]):
-        pass
+        self.outputting_text = False
+        self.emit('tool_submit', tools=[{"name": names[i], "inputs": inputs[i], "result": results[i]} for i in range(len(names))])
+
     def turn_end(self):
-        pass
+        self.outputting_text = False
+        self.emit('turn_end')
+
+    def emit(self, event, **kwargs):
+        self.socket.emit(event, kwargs)

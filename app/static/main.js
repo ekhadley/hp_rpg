@@ -2,11 +2,13 @@
 const socket = io();
 
 // DOM elements
+const welcomeWrapper = document.getElementById('welcome-container');
+const chatHeader = document.getElementById('chat-header');
 const chatHistory = document.getElementById('chat-history');
 const userInput = document.getElementById('user-input');
 const messageForm = document.getElementById('message-form');
-// Removed tool details variables
 const newStoryBtn = document.getElementById('new-story-btn');
+const createStoryBtn = document.getElementById('create-story-btn');
 const createStoryContainer = document.getElementById('create-story-container');
 const storyList = document.getElementById('story-list');
 const createStoryForm = document.getElementById('create-story-form');
@@ -24,8 +26,18 @@ if (storyList) {
     storyList.addEventListener('click', function(e) {
         let storyItem = e.target.closest('.story-item');
         if (storyItem) {
-            const story = storyItem.getAttribute('data-story');
-            window.location.href = `/select/${story}`;
+            socket.emit('select_story', { "selected_story": storyItem.getAttribute('data-story') });
+            // Clear chat history when switching stories
+            if (chatHistory) {
+                chatHistory.innerHTML = '';
+            }
+            // Hide welcome wrapper and show chat wrapper
+            if (welcomeWrapper) {
+                welcomeWrapper.style.display = 'none';
+            }
+            if (chatHeader) {
+                chatHeader.style.display = 'flex';
+            }
         }
     });
 }
@@ -34,6 +46,16 @@ if (storyList) {
 if (newStoryBtn) {
     newStoryBtn.addEventListener('click', function() {
         createStoryContainer.classList.toggle('active');
+    });
+}
+
+if (createStoryBtn) {
+    createStoryBtn.addEventListener('click', function() {
+        e.preventDefault();
+        new_story_name = document.getElementById('new_story_name').value;
+        socket.emit('create_story', { story_name: new_story_name });
+        createStoryContainer.classList.remove('active');
+        addNewStory({ story_name: new_story_name, story: new_story_name });
     });
 }
 
@@ -49,30 +71,6 @@ if (messageForm) {
     });
 }
 
-// Removed tool toggle event listener
-
-// Socket events
-socket.on('connect', function() {
-    console.log('Connected to server');
-    
-    // We no longer show typing indicator on connect - we'll wait for server events
-});
-
-socket.on('story_list_update', function(data) {
-    updateStoryList(data.stories);
-});
-
-socket.on('story_selected', function(data) {
-    currentStory = data.story;
-    if (document.getElementById('current-story-title')) {
-        document.getElementById('current-story-title').textContent = data.story;
-    }
-    // Clear chat history when switching stories
-    if (chatHistory) {
-        chatHistory.innerHTML = '';
-    }
-});
-
 // New event to show typing indicator when processing starts
 socket.on('processing_started', function() {
     if (chatHistory) {
@@ -84,7 +82,6 @@ socket.on('processing_started', function() {
             <div class="typing-dot"></div>
         `;
         chatHistory.appendChild(typingIndicator);
-        scrollToBottom();
     }
 });
 
@@ -115,25 +112,19 @@ socket.on('user_message_received', function(data) {
 
 socket.on('text_start', function() {
     console.log('Narrator switched to outputting text');
-
     
     // Create a new narrator message element
     currentNarratorMessageElement = document.createElement('div');
     currentNarratorMessageElement.className = 'message narrator-message';
     currentNarratorMessageElement.style.display = 'none'; // Hide until we get content
     chatHistory.appendChild(currentNarratorMessageElement);
-    
-    // Scroll to bottom
-    scrollToBottom();
 });
 
 // Store the raw content to avoid extra spaces
 let accumulatedContent = '';
 
 // Track the last received timestamp to prevent duplicate/out-of-order chunks
-let lastTimestamp = 0;
-
-socket.on('assistant_text', function(data) {
+socket.on('text_output', function(data) {
     const typingIndicator = document.querySelector('.typing-indicator');
     if (typingIndicator) {
         typingIndicator.remove();
@@ -141,16 +132,6 @@ socket.on('assistant_text', function(data) {
     // Show and update the narrator message
     if (currentNarratorMessageElement) {
         currentNarratorMessageElement.style.display = 'block';
-        
-        // Make sure we process text chunks in the order they were sent
-        if (data.timestamp && data.timestamp < lastTimestamp) {
-            console.log('Discarding out-of-order text chunk');
-            return;
-        }
-        
-        if (data.timestamp) {
-            lastTimestamp = data.timestamp;
-        }
         
         // Accumulate the raw text
         accumulatedContent += data.text;
@@ -190,8 +171,6 @@ socket.on('assistant_text', function(data) {
             currentNarratorMessageElement.textContent = processedContent;
         }
         
-        // Scroll to bottom
-        scrollToBottom();
     }
 });
 
@@ -246,9 +225,6 @@ socket.on('tool_submit', function(data) {
             });
         }
     });
-    
-    // Scroll to bottom after adding tool messages
-    scrollToBottom();
 });
 
 socket.on('turn_end', function() {
@@ -270,6 +246,14 @@ socket.on('turn_end', function() {
     }
 });
 
+function addNewStory(story) {
+    const storyItem = document.createElement('div');
+    storyItem.className = 'story-item';
+    storyItem.setAttribute('data-story', story.story);
+    storyItem.textContent = story.story_name;
+    storyList.appendChild(storyItem);
+}
+
 // Helper functions
 function addUserMessage(message) {
     if (!chatHistory) return;
@@ -288,7 +272,6 @@ function addUserMessage(message) {
     // Add message to container, then container to chat
     messageContainer.appendChild(messageElement);
     chatHistory.appendChild(messageContainer);
-    scrollToBottom();
     
     // Disable input while waiting for response
     if (userInput) {
@@ -296,37 +279,10 @@ function addUserMessage(message) {
     }
 }
 
-function scrollToBottom() {
-    if (chatHistory) {
-        chatHistory.scrollTop = chatHistory.scrollHeight;
-    }
-}
-
-function updateStoryList(stories) {
-    if (!storyList) return;
-    
-    storyList.innerHTML = '';
-    stories.forEach(story => {
-        const active = currentStory === story ? 'active' : '';
-        storyList.innerHTML += `
-            <li class="story-item ${active}" data-story="${story}">
-                <i class="fas fa-book"></i>
-                <span>${story}</span>
-            </li>
-        `;
-    });
-}
-
 // Export conversation history to console
 function exportConversation() {
     console.log('Conversation History:');
     console.log(JSON.stringify(conversationHistory, null, 2));
-    
-    // Create a time-stamped filename for downloading (optional feature)
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const filename = `${currentStory || 'conversation'}-${timestamp}.json`;
-    
-    // alert(`Conversation JSON has been printed to the console (F12)`);
 }
 
 // Initial setup
