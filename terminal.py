@@ -5,18 +5,6 @@ from callbacks import TerminalPrinter
 from api import Assistant
 import model_tools
 
-def selectStory() -> str:
-    print("Welcome to the game. Please select a story to play:")
-    stories = listStoryNames()
-    print(f"\t0. Create a new story.")
-    for i, story in zip(range(1, len(stories)+1), stories):
-        print(f"\t{i}. {story}")
-    choice = int(input("Enter the number of the story you want to play: "))
-    if choice == 0:
-        story_name = input("Enter the name of the new story: ")
-        makeNewStoryDir(story_name)
-        return story_name
-    return stories[choice-1]
 
 # TODO:
 # - token counting and appropriate warnings.
