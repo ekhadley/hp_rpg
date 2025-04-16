@@ -156,7 +156,7 @@ class OpenAIAssistant:
                     print(bold, red, f"ERROR: RUN FAILED:\n")
                     print(event.to_dict())
                 if currently_outputting_text:
-                    print(yellow, "\nAssistant finished producing text.", endc)
+                    print(yellow, "Assistant finished producing text.", endc)
                     currently_outputting_text = False
         stream.close()
         if tool_submit_required:
@@ -273,10 +273,13 @@ class AnthropicAssistant:
                         self.cb.tool_submit(names=tool_names, inputs=tool_inputss, results=[r['content'] for r in tool_results])
                         self.addUserMessage(tool_results)
                         self.run()
+                        return
                 elif debug() and event.type != "content_block_delta":
                     if currently_outputting_text:
-                        print(yellow, "\nAssistant finished producing text.", endc)
+                        print(yellow, "Assistant finished producing text.", endc)
                         currently_outputting_text = False
+        self.cb.turn_end()
+
 
 def Assistant(
     model_name:str,
