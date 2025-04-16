@@ -96,7 +96,10 @@ socket.on('assistant_ready', function() {
     if (typingIndicator) {
         typingIndicator.remove();
     }
-
+    
+    // For resumed conversations, ensure we're ready for new messages
+    accumulatedContent = '';
+    currentNarratorMessageElement = null;
 });
 
 socket.on('user_message_received', function(data) {
@@ -259,10 +262,7 @@ socket.on('turn_end', function() {
     }
     
     currentNarratorMessageElement = null;
-    
-    // Reset accumulated content for next turn
     accumulatedContent = '';
-    
     // Enable user input
     if (userInput) {
         userInput.disabled = false;

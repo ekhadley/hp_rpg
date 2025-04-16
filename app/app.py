@@ -12,7 +12,7 @@ from callbacks import WebCallbackHandler
 from api import Assistant
 import model_tools
 from model_tools import Toolbox, getFullInstructionMessage
-from main import makeNewStory, model_instruction
+from terminal import makeNewStory, model_instruction
 from utils import *
 
 app = Flask(__name__)
@@ -62,7 +62,7 @@ def initialize_assistant(session_id, story_name):
         socketio.emit('assistant_ready', room=session_id) # have to emit before we output so page can load
         time.sleep(0.3)
         asst.cb.text_output(last_message_content)
-        #web_handler.turn_end()
+        web_handler.turn_end()
     else:
         if debug(): print(bold, cyan, f"Created new history file", endc)
         asst.addUserMessage(getFullInstructionMessage())
