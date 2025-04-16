@@ -365,6 +365,7 @@ Nonverbal spellcasting involves performing magic without speaking the incantatio
 
 ### Chronological Consistency
 - Maintain logical continuity within the established timeline or the unfolding narrative.
+- Do not narrate using information that the player character does not know. For example, don't mention a canon by character by name before the player knows who they are.
 - When first creating a story, be sure to choose or ask the player to choose a specific point in the canon timeline. Prewar, Postwar, Main events, etc.
 - Integrate relevant past events, recent developments, and evolving circumstances affecting character behaviors, motivations, or dialogues, adjusted by Hogwarts year progression and MS growth (e.g., Year 3 characters know *Riddikulus* post-boggart lessons; a character previously injured might still show signs of fatigue).
 

@@ -43,8 +43,10 @@ def select_story(data):
 
     history_exists = asst.load(story_history_path)
     if history_exists:
+        if debug(): print(cyan, "History loaded successfully.", endc)
         asst.cb.text_output(asst.getLastMessageContent())
     else:
+        if debug(): print(cyan, "No history found, initializing new history file.", endc)
         asst.addUserMessage(getFullInstructionMessage())
         asst.run()
         asst.save(story_history_path)
