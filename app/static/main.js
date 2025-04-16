@@ -26,7 +26,8 @@ if (storyList) {
     storyList.addEventListener('click', function(e) {
         let storyItem = e.target.closest('.story-item');
         if (storyItem) {
-            storyTitle = storyItem.getAttribute('data-story');
+            let storyTitle = storyItem.getAttribute('data-story');
+            console.log('Selected story:', storyTitle);
             socket.emit('select_story', { "selected_story": storyTitle });
             // Clear chat history when switching stories
             if (document.getElementById('current-story-title')) {
@@ -42,6 +43,7 @@ if (storyList) {
             if (chatHeader) {
                 chatHeader.style.display = 'flex';
             }
+            showTypingIndicator();
         }
     });
 }
@@ -55,11 +57,12 @@ if (newStoryBtn) {
 
 if (createStoryBtn) {
     createStoryBtn.addEventListener('click', function() {
-        e.preventDefault();
+        //e.preventDefault();
         new_story_name = document.getElementById('new_story_name').value;
+        createStoryContainer.classList.remove('active');
         socket.emit('create_story', { story_name: new_story_name });
         createStoryContainer.classList.remove('active');
-        addNewStory({ story_name: new_story_name, story: new_story_name });
+        addNewStory({ story_name: new_story_name });
     });
 }
 
@@ -71,47 +74,22 @@ if (messageForm) {
         if (message) {
             socket.emit('user_message', { message });
             userInput.value = '';
+
+            addUserMessage(message);
+            conversationHistory.push({
+                role: 'user',
+                content: message,
+                timestamp: new Date().toISOString()
+            });
+            scrollToBottom()
         }
     });
 }
 
-// New event to show typing indicator when processing starts
-socket.on('processing_started', function() {
-    if (chatHistory) {
-        const typingIndicator = document.createElement('div');
-        typingIndicator.className = 'typing-indicator';
-        typingIndicator.innerHTML = `
-            <div class="typing-dot"></div>
-            <div class="typing-dot"></div>
-            <div class="typing-dot"></div>
-        `;
-        chatHistory.appendChild(typingIndicator);
-    }
-});
-
-// Event when assistant is fully initialized and ready
 socket.on('assistant_ready', function() {
-    // Remove typing indicator if assistant is ready without sending any text
-    // (which happens when loading an existing completed story)
-    const typingIndicator = document.querySelector('.typing-indicator');
-    if (typingIndicator) {
-        typingIndicator.remove();
-    }
-    
-    // For resumed conversations, ensure we're ready for new messages
-    accumulatedContent = '';
-    currentNarratorMessageElement = null;
-});
-
-socket.on('user_message_received', function(data) {
-    addUserMessage(data.message);
-    
-    // Add to conversation history
-    conversationHistory.push({
-        role: 'user',
-        content: data.message,
-        timestamp: new Date().toISOString()
-    });
+    hideTypingIndicator();
+    //accumulatedContent = '';
+    //currentNarratorMessageElement = null;
 });
 
 socket.on('text_start', function() {
@@ -287,6 +265,31 @@ function addUserMessage(message) {
 function exportConversation() {
     console.log('Conversation History:');
     console.log(JSON.stringify(conversationHistory, null, 2));
+}
+
+function showTypingIndicator() {
+    if (chatHistory) {
+        const typingIndicator = document.createElement('div');
+        typingIndicator.className = 'typing-indicator';
+        typingIndicator.innerHTML = `
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+        `;
+        chatHistory.appendChild(typingIndicator);
+    }
+}
+function hideTypingIndicator() {
+    const typingIndicator = document.querySelector('.typing-indicator');
+    if (typingIndicator) {
+        typingIndicator.remove();
+    }
+}
+
+function scrollToBottom() {
+    if (chatHistory) {
+        chatHistory.scrollTop = chatHistory.scrollHeight;
+    }
 }
 
 // Initial setup
