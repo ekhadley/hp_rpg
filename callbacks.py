@@ -7,18 +7,18 @@ from utils import *
 # each type of callback is given these exact arguments as keywords
 def example_text_callback(text: str):
     print(f"Assistant: '{text}'")
-def example_tool_request_callback(name: str, inputs: str|dict):
+def example_tool_request_callback(name: str, inputs: dict):
     print(f"Tool requested: {name}({inputs})")
-def example_tool_submit_callback(names: list[str], inputs: list[str|dict], results: list[str]):
+def example_tool_submit_callback(names: list[str], inputs: list[dict], results: list[str]):
     for i in range(len(names)):
         print(f"Tool output submitted: {names[i]}({inputs[i]}) = {results[i]}")
 
 class CallbackHandler:
     def text_output(self, text):
         pass
-    def tool_request(self, name:str, inputs: str|dict):
+    def tool_request(self, name:str, inputs: dict):
         pass
-    def tool_submit(self, names: list[str], inputs: list[str|dict], results: list[str]):
+    def tool_submit(self, names: list[str], inputs: list[dict], results: list[str]):
         pass
     def turn_end(self):
         pass
@@ -35,10 +35,10 @@ class TerminalPrinter(CallbackHandler): # streams text into the terminal in nice
             self.narrating = True
             print(self.assistant_color, f"Narrator: ")
         print(self.assistant_color, text, sep="", end=self.user_color)
-    def tool_request(self, name:str, inputs: str|dict):
+    def tool_request(self, name:str, inputs: dict):
         self.narrating = False
         print(self.tool_color, f"Tool requested: {name}({inputs})", endc)
-    def tool_submit(self, names: list[str], inputs: list[str|dict], results: list[str]):
+    def tool_submit(self, names: list[str], inputs: list[dict], results: list[str]):
         self.narrating = False
         for i, name in enumerate(names):
             if name not in ["summarize_story", "read_story_summary", "read_character_creation_guide", "write_file", "read_file"]:
@@ -51,9 +51,9 @@ class WebCallbackHandler(CallbackHandler):
         pass
     def text_output(self, text):
         pass
-    def tool_request(self, name:str, inputs: str|dict):
+    def tool_request(self, name:str, inputs: dict):
         pass
-    def tool_submit(self, names: list[str], inputs: list[str|dict], results: list[str]):
+    def tool_submit(self, names: list[str], inputs: list[dict], results: list[str]):
         pass
     def turn_end(self):
         pass

@@ -78,6 +78,7 @@ class Tool:
             if debug(): print(pink, f"tool returned: '{tool_result}'", endc)
             return tool_result
         except Exception as e:
+            if debug(): print(bold, red, f"error in tool {self.name}: {str(e)}", endc)
             return f"error in tool {self.name}: {str(e)}"
     
     
@@ -89,20 +90,11 @@ class Toolbox:
         self.openai_schemas = [tool.openai_schema for tool in self.tools]
         self.anthropic_schemas = [tool.anthropic_schema for tool in self.tools]
     
-    def parseToolParameters(self, parameters: str|dict) -> dict:
-        if isinstance(parameters, dict):
-            return parameters
-        elif isinstance(parameters, str):
-            try:
-                return json.loads(parameters)
-            except json.JSONDecodeError:
-                raise ValueError("Invalid JSON format for parameters.")
-        raise ValueError("Parameters should be a JSON string or a dictionary.")
-    
-    def getToolResult(self, tool_name: str, parameters: str|dict) -> str:
+    def getToolResult(self, tool_name: str, parameters: dict) -> str:
         if tool_name in self.tool_map:
-            return self.tool_map[tool_name].getResult(self.parseToolParameters(parameters))
+            return self.tool_map[tool_name].getResult(parameters)
         else:
+            if debug(): print(bold, red, f"attempt to call nonexistant tool", endc)
             return f"error: Tool {tool_name} not found."
 
     def updateDefaultKwargs(self, kwargs: dict):
@@ -131,7 +123,7 @@ def list_directory_tool_handler(**kwargs) -> list[str]:
 
 def read_file_tool_handler(file_name: str, **kwargs) -> str:
     """read_file: Read the contents of a file in the local directory.
-    file_path (string): Name of the file to be read.
+    file_name (string): Name of the file to be read.
     """
     with open(f"./{file_name}", 'r') as file:
         content = file.read()

@@ -182,7 +182,7 @@ class OpenAIAssistant:
                 for tool_call in required_outputs:
                     tool_name = tool_call.function.name
                     tool_names.append(tool_name)
-                    arguments = tool_call.function.arguments
+                    arguments = json.loads(tool_call.function.arguments)
                     tool_inputss.append(arguments)
                     tool_id = tool_call.id
                     self.cb.tool_request(name=tool_name, inputs=arguments)
@@ -196,7 +196,7 @@ class OpenAIAssistant:
                     print(bold, red, f"ERROR: RUN FAILED:\n")
                     print(event.to_dict())
                 if currently_outputting_text:
-                    print(yellow, "Assistant finished producing text.", endc)
+                    print(yellow, "\nAssistant finished producing text.", endc)
                     currently_outputting_text = False
         stream.close()
         if tool_submit_required:
@@ -315,7 +315,7 @@ class AnthropicAssistant:
                         self.run()
                 elif debug() and event.type != "content_block_delta":
                     if currently_outputting_text:
-                        print(yellow, "Assistant finished producing text.", endc)
+                        print(yellow, "\nAssistant finished producing text.", endc)
                         currently_outputting_text = False
 
 def Assistant(
@@ -354,10 +354,12 @@ if __name__ == "__main__":
 
     asst = Assistant(
         model_name = "claude-3-haiku-20240307",
+        #model_name = "gpt-4o-mini",
         toolbox = basic_tb,
         instructions = "You are a helpful assistant that can use tools.",
         callback_handler = callbacks.TerminalPrinter()
     )
 
     asst.addUserMessage("Hello assistant. Can you generate a random number from 1-10 and add to it the number of files in the current directory?")
+    #asst.addUserMessage("Hello assistant. Can you describe the contents of `utils.py`?")
     asst.run()
