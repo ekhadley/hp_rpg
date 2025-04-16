@@ -26,8 +26,12 @@ if (storyList) {
     storyList.addEventListener('click', function(e) {
         let storyItem = e.target.closest('.story-item');
         if (storyItem) {
-            socket.emit('select_story', { "selected_story": storyItem.getAttribute('data-story') });
+            storyTitle = storyItem.getAttribute('data-story');
+            socket.emit('select_story', { "selected_story": storyTitle });
             // Clear chat history when switching stories
+            if (document.getElementById('current-story-title')) {
+                document.getElementById('current-story-title').textContent = storyTitle;
+            }
             if (chatHistory) {
                 chatHistory.innerHTML = '';
             }
