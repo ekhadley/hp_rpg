@@ -54,13 +54,13 @@ class OpenAIAssistant:
     def __init__(
             self,
             model_name: str,
-            tb: Toolbox,
+            toolbox: Toolbox,
             instructions: str,
             callback_handler: CallbackHandler,
         ):
         self.model_name = model_name if model_name else "gpt-4o-mini"
-        self.tb = tb
-        self.tool_schemas = tb.openai_schemas
+        self.tb = toolbox
+        self.tool_schemas = self.tb.openai_schemas
         self.assistant = openai.beta.assistants.create(
             instructions = instructions,
             model = self.model_name,
@@ -196,7 +196,7 @@ class OpenAIAssistant:
                     print(bold, red, f"ERROR: RUN FAILED:\n")
                     print(event.to_dict())
                 if currently_outputting_text:
-                    print(red, "Assistant finished producing text.", endc)
+                    print(yellow, "Assistant finished producing text.", endc)
                     currently_outputting_text = False
         stream.close()
         if tool_submit_required:
@@ -207,14 +207,14 @@ class AnthropicAssistant:
     def __init__(
             self,
             model_name: str,
-            tb: Toolbox,
+            toolbox: Toolbox,
             instructions: str,
             callback_handler: CallbackHandler,
         ):
         self.model_name = model_name if model_name else "claude-3-haiku-20240307"
         self.client = anthropic.Anthropic()
-        self.tb = tb
-        self.tool_schemas = tb.anthropic_schemas
+        self.tb = toolbox
+        self.tool_schemas = self.tb.anthropic_schemas
         self.messages: list[dict] = []
         self.max_tokens = 4096
 
@@ -313,16 +313,14 @@ class AnthropicAssistant:
                         self.cb.tool_submit(names=tool_names, inputs=tool_inputss, results=[r['content'] for r in tool_results])
                         self.addUserMessage(tool_results)
                         self.run()
-                elif debug():
+                elif debug() and event.type != "content_block_delta":
                     if currently_outputting_text:
-                        print(red, "Assistant finished producing text.", endc)
+                        print(yellow, "Assistant finished producing text.", endc)
                         currently_outputting_text = False
-
-
 
 def Assistant(
     model_name:str,
-    tb:Toolbox,
+    toolbox:Toolbox,
     instructions,
     callback_handler: CallbackHandler = CallbackHandler(),
 ) -> OpenAIAssistant|AnthropicAssistant:
@@ -334,7 +332,7 @@ def Assistant(
         if debug(): print(yellow, f"creating OpenAIAssistant with model '{model_name}'", endc)
         return OpenAIAssistant(
             model_name,
-            tb,
+            toolbox,
             instructions,
             callback_handler
         )
@@ -342,20 +340,24 @@ def Assistant(
         if debug(): print(yellow, f"creating AnthropicAssistant with model '{model_name}'", endc)
         return AnthropicAssistant(
             model_name,
-            tb,
+            toolbox,
             instructions,
             callback_handler
         )
 
 if __name__ == "__main__":
+    basic_tb = Toolbox([ # demo
+        model_tools.list_directory_tool_handler,
+        model_tools.read_file_tool_handler,
+        model_tools.random_number_tool_handler
+    ], default_kwargs={"pp": "kek_lmao_rofl", "aa": 123})
 
     asst = Assistant(
-        #model_name = "claude-3-7-sonnet-20250219",
         model_name = "claude-3-haiku-20240307",
-        tb = model_tools.basic_tb,
+        toolbox = basic_tb,
         instructions = "You are a helpful assistant that can use tools.",
         callback_handler = callbacks.TerminalPrinter()
     )
 
-    asst.addUserMessage("Hello, assistant. Can you generate a random number from 1-10 and add to it the number of files in the current directory?")
+    asst.addUserMessage("Hello assistant. Can you generate a random number from 1-10 and add to it the number of files in the current directory?")
     asst.run()
