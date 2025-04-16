@@ -19,3 +19,14 @@ endc = '\033[0m'
 
 def debug() -> bool:
     return os.environ.get("DEBUG", "0").lower() == "1"
+
+def listStoryNames() -> list[str]:
+    return os.listdir("./stories")
+
+def makeNewStoryDir(story_name: str):
+    os.mkdir(f"./stories/{story_name}")
+
+def getFullInstructionMessage() -> str:
+    with open("instructions.md", 'r') as file:
+        content = file.read()
+    return content
