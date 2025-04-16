@@ -6,9 +6,6 @@ from collections.abc import Callable
 
 from utils import *
 
-global current_story
-current_story = ""
-
 def parse_handler_metadata(func):
     doc = inspect.getdoc(func)
     if not doc:
@@ -43,8 +40,7 @@ def parse_handler_metadata(func):
 
 
 class Tool:
-    #def __init__(self, name: str, arg_properties: dict, description: str, handler):
-    def __init__(self, handler: Callable):
+    def __init__(self, handler: Callable, default_kwargs: dict = {}):
         handler_props = parse_handler_metadata(handler)
         self.name = handler_props['name']
         self.description = handler_props['description']
@@ -73,18 +69,22 @@ class Tool:
             }
         }
 
+        self.kwargs = default_kwargs
+
     def getResult(self, parameters: dict) -> str:
         try:
             if debug(): print(pink, f"calling tool '{self.name}' with parameters {parameters}", endc)
-            tool_result = str(self.handler(**parameters))
+            tool_result = str(self.handler(**parameters, **self.kwargs))
             if debug(): print(pink, f"tool returned: '{tool_result}'", endc)
             return tool_result
         except Exception as e:
             return f"error in tool {self.name}: {str(e)}"
     
+    
 class Toolbox:
-    def __init__(self, handlers: list[Callable]):
-        self.tools = [Tool(handler) for handler in handlers]
+    def __init__(self, handlers: list[Callable], default_kwargs: dict = {}):
+        self.tools = [Tool(handler, default_kwargs) for handler in handlers]
+        self.kwargs = default_kwargs
         self.tool_map = {tool.name: tool for tool in self.tools}
         self.openai_schemas = [tool.openai_schema for tool in self.tools]
         self.anthropic_schemas = [tool.anthropic_schema for tool in self.tools]
@@ -105,14 +105,17 @@ class Toolbox:
         else:
             return f"error: Tool {tool_name} not found."
 
-
-
+    def updateDefaultKwargs(self, kwargs: dict):
+        self.kwargs = kwargs
+        for tool in self.tools:
+            tool.kwargs = kwargs
 
 # Tool handlers
 # descriptions and argument properties are parsed automatically from the docstring.
 # They have to be formatted exactly like this.
 # We handle errors inside these functions just to give nicer error messages to the model. You don't have to handle them here.
-def random_number_tool_handler(max: int) -> int:
+# Toolboxes can be given default values as kwargs which will get passed to every function call.
+def random_number_tool_handler(max: int, **kwargs) -> int:
     """random_number: Generate a random number from 1 to max inclusive.
     max (integer): The maximum value of the random number.
     """
@@ -120,13 +123,13 @@ def random_number_tool_handler(max: int) -> int:
     random_number = random.randint(1, max)
     return random_number
 
-def list_directory_tool_handler() -> list[str]:
+def list_directory_tool_handler(**kwargs) -> list[str]:
     """list_files: List the files in the local directory.
     """
     files = os.listdir(f"./")
     return files
 
-def read_file_tool_handler(file_name: str) -> str:
+def read_file_tool_handler(file_name: str, **kwargs) -> str:
     """read_file: Read the contents of a file in the local directory.
     file_path (string): Name of the file to be read.
     """
@@ -136,63 +139,63 @@ def read_file_tool_handler(file_name: str) -> str:
 
 ############## story tools ################
 
-def list_story_files_tool_handler() -> list[str]:
+def list_story_files_tool_handler(**kwargs) -> list[str]:
     """list_files: Lists all files in the current story directory.
     """
-    files = [f for f in os.listdir(f"./stories/{current_story}") if ".md" in f]
+    files = [f for f in os.listdir(f"./stories/{kwargs['current_story']}") if ".md" in f]
     return files
 
-def read_story_file_tool_handler(file_name: str) -> str:
+def read_story_file_tool_handler(file_name: str, **kwargs) -> str:
     """read_file: Read the contents of a file in the current story directory.
     file_name (string): Name of the file to be read. Should include the file extension, and not include any parent folders or subfolders.
     """
-    with open(f"./stories/{current_story}/{file_name}", 'r') as file:
+    with open(f"./stories/{kwargs['current_story']}/{file_name}", 'r') as file:
         content = file.read()
     return content
 
-def write_story_file_tool_handler(file_name: str, contents: str) -> str:
+def write_story_file_tool_handler(file_name: str, contents: str, **kwargs) -> str:
     """write_file: Create or overwrite a file in the current story directory with the given name and contents. The contents of the file, if it exists, will be deleted permanently. If editing a file, you should read the file first, then write the edited or extended version after.
     file_name (string): Name of the file to save to. Should be a markdown file, ending in '.md'. Should not be a part of any subfolder.
     contents (string): The contents to write to the file. Do not include backticks around the contents to be saved.
     """
     if not file_name.endswith(".md"):
         file_name += ".md"
-    exists = os.path.exists(f"./stories/{current_story}/{file_name}")
-    with open(f"./stories/{current_story}/{file_name}", 'w') as file:
+    exists = os.path.exists(f"./stories/{kwargs['current_story']}/{file_name}")
+    with open(f"./stories/{kwargs['current_story']}/{file_name}", 'w') as file:
         file.write(contents)
     if exists: return "File edited successfully."
     else: return "File saved successfully."
 
-def _summarize_story_tool_handler(contents: str) -> str:
+def _summarize_story_tool_handler(contents: str, **kwargs) -> str:
     """summarize_story: This will overwrite the contents of the story_summary.md file with the contents provided. 
     contents (string): The contents to write to the story summary file. Do not include backticks around the contents to be saved.
     """
-    with open(f"./stories/{current_story}/story_summary.md", 'w') as file:
+    with open(f"./stories/{kwargs['current_story']}/story_summary.md", 'w') as file:
         file.write(contents)
     return "Story summary saved successfully."
 
-def read_story_summary_tool_handler() -> str:
+def read_story_summary_tool_handler(**kwargs) -> str:
     """read_story_summary: Read the story summary file (story_summary.md) in the current story directory.
     """
-    with open(f"./stories/{current_story}/story_summary.md", 'r') as file:
+    with open(f"./stories/{kwargs['current_story']}/story_summary.md", 'r') as file:
         content = file.read()
     return content
 
-def read_story_plan_tool_handler() -> str:
+def read_story_plan_tool_handler(**kwargs) -> str:
     """read_story_plan: Read the story plan file, laying out the behind-the-scenes architecture of the current story.
     """
-    with open(f"./stories/{current_story}/story_plan.md", 'r') as file:
+    with open(f"./stories/{kwargs['current_story']}/story_plan.md", 'r') as file:
         content = file.read()
     return content
 
-def read_story_planning_guide() -> str:
+def read_story_planning_guide(**kwargs) -> str:
     """read_story_planning_guide: Read the story planning guide, instructing you how to create a story plan. Only use this if story_plan.md does not alredy exist.
     """
     with open(f"./planning_guide.md", 'r') as file:
         content = file.read()
     return content
 
-def roll_dice_tool_handler(dice: str) -> int:
+def roll_dice_tool_handler(dice: str, **kwargs) -> int:
     """roll_dice: Roll a set of dice with the given number of sides and return the sum of the rolls.
     dice (string): A string describing the set of dice to roll, of the form 'dX' or 'XdY'.
     """
@@ -217,28 +220,3 @@ def roll_dice_tool_handler(dice: str) -> int:
     
     rolls = [random.randint(1, sides) for _ in range(num)]
     return sum(rolls)
-
-# not an actual handler
-def getFullInstructionMessage() -> str:
-    with open("instructions.md", 'r') as file:
-        content = file.read()
-    return content
-
-# some predefined toolboxes
-dm_tb = Toolbox([ # for actually playing the game
-    read_story_planning_guide,
-    read_story_plan_tool_handler,
-    read_story_summary_tool_handler,
-    list_story_files_tool_handler,
-    write_story_file_tool_handler,
-    read_story_file_tool_handler,
-    roll_dice_tool_handler,
-])
-
-basic_tb = Toolbox([ # demo
-    list_directory_tool_handler,
-    read_file_tool_handler,
-    random_number_tool_handler
-])
-"""
-"""
