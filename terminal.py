@@ -2,7 +2,7 @@ import os
 
 from utils import *
 from callbacks import TerminalPrinter
-from api import Assistant
+from api import makeAssistant
 import model_tools
 
 
@@ -22,13 +22,14 @@ if __name__ == "__main__":
         model_tools.roll_dice_tool_handler,
     ], default_kwargs={"current_story": story_name})
 
-    asst = Assistant(
+    asst = makeAssistant(
         #model_name = "claude-3-7-sonnet-20250219",
-        model_name = "claude-3-haiku-20240307",
-        #model_name = "gpt-4o-mini",
+        #model_name = "claude-3-haiku-20240307",
+        model_name = "gpt-4o-mini",
         #model_name = "gpt-4o-",
         toolbox = story_tb,
         callback_handler = TerminalPrinter(),
+        system_prompt = getFullInstructionMessage()
     )
 
     history_file_path = f"./stories/{story_name}/history.json"
@@ -36,7 +37,7 @@ if __name__ == "__main__":
     if history_exists:
         asst.cb.text_output(asst.getLastMessageContent())
     else:
-        asst.addUserMessage(getFullInstructionMessage())
+        asst.addUserMessage("Begin.")
         asst.run()
 
     while True:
@@ -44,4 +45,3 @@ if __name__ == "__main__":
         asst.addUserMessage(user_message)
         asst.run()
         asst.save(history_file_path)
-        

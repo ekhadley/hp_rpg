@@ -3,7 +3,7 @@ from flask_socketio import SocketIO, emit
 from flask import Flask, render_template, redirect, url_for, request
 
 from utils import *
-from api import Assistant
+from api import makeAssistant
 import model_tools
 from callbacks import WebCallbackHandler
 
@@ -30,7 +30,7 @@ def select_story(data):
         model_tools.roll_dice_tool_handler,
     ], default_kwargs={"current_story": story_name})
 
-    asst = Assistant(
+    asst = makeAssistant(
         model_name = "claude-3-7-sonnet-20250219",
         #model_name = "claude-3-haiku-20240307",
         #model_name = "gpt-4o-mini",
@@ -38,7 +38,7 @@ def select_story(data):
         #model_name = "gpt-4.1",
         toolbox = story_tb,
         callback_handler = WebCallbackHandler(socket),
-        instructions = "Your job is to operate as an interactive narrator for the world of Harry Potter, enhanced with a dice-based RPG ruleset inspired by D&D. This system blends immersive storytelling with mechanics to create a dynamic experience. Your role is to weave authentic, atmospheric descriptions and dialogue in J.K. Rowling's style while integrating RPG elements like character stats, dice rolls, and a Magical Stamina system for spellcasting. The simulation maintains chronological consistency, character authenticity, and player agency. You will be given 3 instruction files. One containing the ruleset of the game, one containing all spells and abilities, and one containing instructions for correct narration and storytelling. You should follow these guides precisely to ensure a consistent and engaging experience for the player."
+        system_prompt = hp_system_prompt
     )
 
     history_exists = asst.load(story_history_path)
@@ -47,7 +47,6 @@ def select_story(data):
         asst.cb.text_output(asst.getLastMessageContent())
     else:
         if debug(): print(cyan, "No history found, initializing new history file.", endc)
-        asst.addUserMessage(getFullInstructionMessage())
         asst.run()
         asst.save(story_history_path)
     socket.emit('assistant_ready')

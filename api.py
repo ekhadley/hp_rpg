@@ -11,9 +11,8 @@ import callbacks
 from callbacks import CallbackHandler
 from abc import ABC, abstractmethod
 
-
 class Assistant:
-    def __init__( self, model_name: str, toolbox: Toolbox, instructions: str, callback_handler: CallbackHandler):
+    def __init__( self, model_name: str, toolbox: Toolbox, system_prompt: str, callback_handler: CallbackHandler):
         pass
     def printMessages(self) -> None:
         pass
@@ -37,14 +36,14 @@ class OpenAIAssistant(Assistant):
             self,
             model_name: str,
             toolbox: Toolbox,
-            instructions: str,
+            system_prompt: str,
             callback_handler: CallbackHandler,
         ):
         self.model_name = model_name
         self.tb = toolbox
         self.tool_schemas = self.tb.openai_schemas
         self.assistant = openai.beta.assistants.create(
-            instructions = instructions,
+            instructions = system_prompt,
             model = self.model_name,
             tools = self.tool_schemas
         )
@@ -84,12 +83,6 @@ class OpenAIAssistant(Assistant):
                 content_str = content
             print(color, f"{role.capitalize()}: {content_str}")
         
-    def getLastMessageContent(self) -> str:
-        messages = self.getMessages()
-        if len(messages.data) > 0:
-            return messages.data[0].content[-1].text.value
-        return ""
-    
     def printMessagesRaw(self) -> None:
         print(json.dumps(self.getMessages().to_dict(), indent=4))
     
@@ -190,7 +183,7 @@ class AnthropicAssistant(Assistant):
             self,
             model_name: str,
             toolbox: Toolbox,
-            instructions: str,
+            system_prompt: str,
             callback_handler: CallbackHandler,
         ):
         self.model_name = model_name
@@ -199,8 +192,7 @@ class AnthropicAssistant(Assistant):
         self.tool_schemas = self.tb.anthropic_schemas
         self.messages: list[dict] = []
         self.max_tokens = 4096
-
-        self.addUserMessage(instructions)
+        self.system_prompt = system_prompt
 
         self.cb = callback_handler
     
@@ -260,9 +252,15 @@ class AnthropicAssistant(Assistant):
         self.messages.append({"role": "assistant", "content": content})
 
     def getStream(self):
-        return self.client.messages.stream(max_tokens=self.max_tokens, messages=self.messages, model=self.model_name, tools=self.tool_schemas)
+        return self.client.messages.stream(
+                max_tokens=self.max_tokens,
+                messages=self.messages,
+                system=self.system_prompt,
+                model=self.model_name,
+                tools=self.tool_schemas
+            )
 
-    def run(self) -> str: 
+    def run(self) -> None: 
         with self.getStream() as stream:
             currently_outputting_text = False
             for event in stream:
@@ -298,33 +296,9 @@ class AnthropicAssistant(Assistant):
                         return
                 elif debug() and event.type != "content_block_delta":
                     if currently_outputting_text:
-                        print(yellow, "Assistant finished producing text.", endc)
+                        print(yellow, "\nAssistant finished producing text.", endc)
                         currently_outputting_text = False
         self.cb.turn_end()
-
-
-class GoogleAssistant(Assistant):
-    def __init__(
-            self,
-            model_name: str,
-            toolbox: Toolbox,
-            instructions: str,
-            callback_handler: CallbackHandler,
-        ):
-        self.model_name = model_name if model_name else "gemini-1.5"
-        self.tb = toolbox
-        self.tool_schemas = self.tb.google_schemas
-        self.assistant = openai.beta.assistants.create(
-            instructions = instructions,
-            model = self.model_name,
-            tools = self.tool_schemas
-        )
-        self.assistant_id = self.assistant.id
-        self.thread = openai.beta.threads.create()
-        self.thread_id = self.thread.id
-
-        self.cb = callback_handler
-
 
 model_name_providers = {
     "claude": AnthropicAssistant,
@@ -341,11 +315,12 @@ def selectAssistantType(model_name: str) -> Assistant:
     for key in model_name_providers:
         if key in model_name:
             return model_name_providers[key]
+    raise ValueError
 
-def Assistant(
+def makeAssistant(
     model_name:str,
     toolbox:Toolbox,
-    instructions,
+    system_prompt,
     callback_handler: CallbackHandler = CallbackHandler(),
 ) -> Assistant:
     AssistantType = selectAssistantType(model_name)
@@ -353,7 +328,7 @@ def Assistant(
         raise ValueError(f"Unknown model name: {model_name}")
     if debug():
         print(green, f"Creating assistant of type {AssistantType.__name__} with model {model_name}", endc)
-    return AssistantType(model_name, toolbox, instructions, callback_handler)
+    return AssistantType(model_name, toolbox, system_prompt, callback_handler)
 
 if __name__ == "__main__":
     basic_tb = Toolbox([ # demo
@@ -366,7 +341,7 @@ if __name__ == "__main__":
         model_name = "claude-3-haiku-20240307",
         #model_name = "gpt-4o-mini",
         toolbox = basic_tb,
-        instructions = "You are a helpful assistant that can use tools.",
+        system_prompt = "You are a helpful assistant that can use tools.",
         callback_handler = callbacks.TerminalPrinter()
     )
 
