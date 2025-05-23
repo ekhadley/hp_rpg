@@ -31,14 +31,16 @@ def select_story(data):
     ], default_kwargs={"current_story": story_name})
 
     asst = makeAssistant(
-        model_name = "claude-3-7-sonnet-20250219",
+        #model_name = "claude-3-7-sonnet-20250219",
+        #model_name = "claude-opus-4-20250514",
+        model_name = "claude-sonnet-4-20250514",
         #model_name = "claude-3-haiku-20240307",
         #model_name = "gpt-4o-mini",
         #model_name = "gpt-4o-",
         #model_name = "gpt-4.1",
         toolbox = story_tb,
         callback_handler = WebCallbackHandler(socket),
-        system_prompt = hp_system_prompt
+        system_prompt = getFullInstructionMessage()
     )
 
     history_exists = asst.load(story_history_path)
@@ -47,6 +49,7 @@ def select_story(data):
         asst.cb.text_output(asst.getLastMessageContent())
     else:
         if debug(): print(cyan, "No history found, initializing new history file.", endc)
+        asst.addUserMessage("Begin.")
         asst.run()
         asst.save(story_history_path)
     socket.emit('assistant_ready')

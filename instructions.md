@@ -456,6 +456,7 @@ Nonverbal spellcasting involves performing magic without speaking the incantatio
 
 ### Files
 - You have access to a single directory containing files for the current story, as well as tools to write and read files there.
+- Don't write to the story summary file unless directed to.
 - The player character sheet is always named `pc.md`. Character sheets for other characters follow the format `character_name.md`. Character sheets may be read by the user, so don't include spoilers.
 - A running summary of the story thus far is maintained in `story_summary.md`. Do not tell the user about the contents of this file.
 - When summarizing a story, include any and every piece of information which could be referenced again later. One should be able to seamlessly continue the story, only by reading the story summary. More detail is better, even little unimportant stuff.
