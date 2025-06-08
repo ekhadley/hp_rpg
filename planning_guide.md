@@ -21,7 +21,7 @@
   - Between Wars (1981-1995)
   - Second Wizarding War (1995-1998)
   - Post-War (after 1998)
-- **Design setting-appropriate challenges, tensions, and background events**
+- **Design setting-appropriate challenges, tensions, and background events*
 - **Create a "state of the world" document** with:
   - Current Hogwarts staff
   - Political climate in the wizarding world
@@ -128,18 +128,11 @@
   - Secret connections between characters and events
 
 ### Balance Guidelines
-- **The 70/30 Rule**: 70% of the story should be flexible and responsive to player choices; 30% represents key story beats that must occur for narrative coherence
+- **The 30/70 Rule**: 30% of the story should be flexible and responsive to player choices; 70% represents key story beats that must occur for narrative coherence
 - **"Yes, and..." Principle**: Design story elements that build upon player choices rather than restricting them
 - **The Three-Path Minimum**: Each major decision point should offer at least three meaningful directions
 - **The Reconvergence Technique**: Allow divergent paths to eventually reconnect without invalidating player choices
 - **The Hidden Clock**: Create background events that progress regardless of player actions, creating a dynamic world
-
-### Integration with Narration Style
-- **Connect planning elements to narration guidelines** by:
-  - Noting emotional tones for key scenes
-  - Identifying sensory details unique to important locations
-  - Highlighting character voice patterns for consistent dialogue
-  - Marking moments where magical atmosphere should be emphasized
 
 ### Creative Freedom Boundaries
 - **Establish "hard rails"** (absolute story requirements) vs. "soft suggestions" (preferred but flexible elements)

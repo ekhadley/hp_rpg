@@ -46,10 +46,11 @@ def select_story(data):
     history_exists = asst.load(story_history_path)
     if history_exists:
         if debug(): print(cyan, "History loaded successfully.", endc)
-        asst.cb.text_output(asst.getLastMessageContent())
+        conversation_history = asst.getConversationHistory()
+        socket.emit('conversation_history', {'history': conversation_history})
     else:
         if debug(): print(cyan, "No history found, initializing new history file.", endc)
-        asst.addUserMessage("Begin.")
+        asst.addUserMessage("<|begin_conversation|>")
         asst.run()
         asst.save(story_history_path)
     socket.emit('assistant_ready')

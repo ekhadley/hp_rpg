@@ -86,6 +86,30 @@ if (messageForm) {
     });
 }
 
+socket.on('conversation_history', function(data) {
+    console.log('Loading conversation history:', data.history);
+    
+    // Clear existing conversation history in UI
+    conversationHistory = [];
+    
+    // Render each message in chronological order
+    data.history.forEach(function(message) {
+        if (message.role === 'user') {
+            addUserMessage(message.content, false); // Don't disable input when loading history
+        } else if (message.role === 'assistant') {
+            addAssistantMessageFromHistory(message.content);
+        }
+        // Add to local conversation history
+        conversationHistory.push({
+            role: message.role,
+            content: message.content,
+            timestamp: message.timestamp || new Date().toISOString()
+        });
+    });
+    
+    scrollToBottom();
+});
+
 socket.on('assistant_ready', function() {
     hideTypingIndicator();
     //accumulatedContent = '';
@@ -168,7 +192,8 @@ socket.on('tool_request', function(data) {
 
 socket.on('tool_submit', function(data) {
     accumulatedContent = '';
-    if (typingIndicator = document.querySelector('.typing-indicator')) {
+    const typingIndicator = document.querySelector('.typing-indicator');
+    if (typingIndicator) {
         typingIndicator.remove();
     }
     console.log('Tool output:', data);
@@ -237,7 +262,7 @@ function addNewStory(story) {
 }
 
 // Helper functions
-function addUserMessage(message) {
+function addUserMessage(message, disableInput = true) {
     if (!chatHistory) return;
     
     // Create container div for message alignment
@@ -255,10 +280,44 @@ function addUserMessage(message) {
     messageContainer.appendChild(messageElement);
     chatHistory.appendChild(messageContainer);
     
-    // Disable input while waiting for response
-    if (userInput) {
+    // Disable input while waiting for response (unless loading from history)
+    if (disableInput && userInput) {
         userInput.disabled = true;
     }
+}
+
+function addAssistantMessageFromHistory(content) {
+    if (!chatHistory) return;
+    
+    // Create narrator message element
+    const narratorMessageElement = document.createElement('div');
+    narratorMessageElement.className = 'message narrator-message';
+    
+    // Process narration tags (reuse existing logic)
+    let processedContent = content;
+    processedContent = processedContent.replace(/<narration>(.*?)<\/narration>/gs, function(_, narrationContent) {
+        let narrationText = narrationContent;
+        let paragraphs = narrationText.split(/\n\s*\n|\n{2,}/g);
+        let formattedNarration = paragraphs.map(paragraph => {
+            let cleanParagraph = paragraph.replace(/\s+/g, ' ').trim();
+            if (cleanParagraph) {
+                return '<p>' + cleanParagraph + '</p>';
+            }
+            return '';
+        }).join('');
+        return '<div class="book-narration">' + formattedNarration + '</div>';
+    });
+    
+    // Convert markdown to HTML (reuse existing logic)
+    try {
+        const formattedText = marked.parse(processedContent);
+        narratorMessageElement.innerHTML = formattedText;
+    } catch (e) {
+        console.error('Error parsing markdown:', e);
+        narratorMessageElement.textContent = processedContent;
+    }
+    
+    chatHistory.appendChild(narratorMessageElement);
 }
 
 // Export conversation history to console

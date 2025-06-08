@@ -30,6 +30,8 @@ class Assistant:
         pass
     def run(self) -> None:
         pass
+    def getConversationHistory(self) -> list[dict]:
+        pass
 
 class OpenAIAssistant(Assistant):
     def __init__(
@@ -85,6 +87,50 @@ class OpenAIAssistant(Assistant):
         
     def printMessagesRaw(self) -> None:
         print(json.dumps(self.getMessages().to_dict(), indent=4))
+    
+    def getConversationHistory(self) -> list[dict]:
+        """Extract conversation history in a unified format for UI display"""
+        history = []
+        messages = self.getMessages().to_dict()
+        
+        if len(messages['data']) == 0:
+            return history
+            
+        # OpenAI messages are returned newest-first, so reverse for chronological order
+        for message in reversed(messages["data"]):
+            role = message["role"]
+            content = message["content"]
+            timestamp = message.get("created_at", "")
+            
+            # Skip system messages and the special <|begin_conversation|> message
+            if role == "system":
+                continue
+                
+            if isinstance(content, list):
+                # Handle text content
+                text_content = ""
+                for item in content:
+                    if item.get('type') == 'text':
+                        text_value = item.get('text', {}).get('value', '')
+                        if text_value and text_value != "<|begin_conversation|>":
+                            text_content += text_value
+                
+                # Add message if it has text content
+                if text_content.strip():
+                    history.append({
+                        'role': role,
+                        'content': text_content.strip(),
+                        'timestamp': timestamp
+                    })
+            elif isinstance(content, str) and content != "<|begin_conversation|>":
+                # Handle simple string content
+                history.append({
+                    'role': role,
+                    'content': content,
+                    'timestamp': timestamp
+                })
+        
+        return history
     
     def save(self, path: str) -> None:
         if not os.path.exists(path):
@@ -153,7 +199,7 @@ class OpenAIAssistant(Assistant):
                 tool_names = []
                 tool_inputss = []
                 tool_outputs = []
-                if debug(): print(red, green, required_outputs, endc)
+                if debug(): print(red, green, truncate_for_debug(required_outputs), endc)
                 for tool_call in required_outputs:
                     tool_name = tool_call.function.name
                     tool_names.append(tool_name)
@@ -226,6 +272,42 @@ class AnthropicAssistant(Assistant):
         if self.messages:
             return self.messages[-1]["content"][-1]['text']
         return ""
+    
+    def getConversationHistory(self) -> list[dict]:
+        """Extract conversation history in a unified format for UI display"""
+        history = []
+        
+        for message in self.messages:
+            role = message["role"]
+            content = message["content"]
+            
+            # Skip the special <|begin_conversation|> message
+            if isinstance(content, str) and content == "<|begin_conversation|>":
+                continue
+                
+            if isinstance(content, list):
+                # Handle content blocks
+                text_content = ""
+                for item in content:
+                    if item.get('type') == 'text':
+                        text_content += item.get('text', '')
+                
+                # Add message if it has text content
+                if text_content.strip():
+                    history.append({
+                        'role': role,
+                        'content': text_content.strip(),
+                        'timestamp': ""  # Anthropic doesn't provide timestamps in stored messages
+                    })
+            elif isinstance(content, str) and content != "<|begin_conversation|>":
+                # Handle simple string content
+                history.append({
+                    'role': role,
+                    'content': content,
+                    'timestamp': ""
+                })
+        
+        return history
 
     def save(self, path: str) -> None: # for anthropic we just save the raw messages
         if not os.path.exists(path):
@@ -272,7 +354,7 @@ class AnthropicAssistant(Assistant):
                 elif event.type == "message_stop":
                     self.addAssistantMessage([block.to_dict() for block in event.message.content])
                     if event.message.stop_reason == "tool_use":
-                        if debug(): print(pink, "tool use requested: ", endc, event)
+                        if debug(): print(pink, "tool use requested: ", endc, truncate_for_debug(event))
                         tool_names = []
                         tool_inputss = []
                         tool_results = []
