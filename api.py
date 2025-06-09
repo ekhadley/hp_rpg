@@ -16,8 +16,6 @@ class Assistant:
         pass
     def printMessages(self) -> None:
         pass
-    def getLastMessageContent(self) -> str:
-        pass
     def printMessagesRaw(self) -> None:
         pass
     def save(self, path: str) -> None:
@@ -47,7 +45,9 @@ class OpenAIAssistant(Assistant):
         self.assistant = openai.beta.assistants.create(
             instructions = system_prompt,
             model = self.model_name,
-            tools = self.tool_schemas
+            tools = self.tool_schemas,
+            temperature=0.8,
+            top_p=0.95
         )
         self.assistant_id = self.assistant.id
         self.thread = openai.beta.threads.create()
@@ -55,9 +55,6 @@ class OpenAIAssistant(Assistant):
 
         self.cb = callback_handler
     
-    def getLastMessageContent(self) -> str:
-        return self.getMessages().data[0].content[-1].text.value
-        
     def getMessages(self):
         return openai.beta.threads.messages.list(self.thread_id)
     
@@ -237,7 +234,7 @@ class AnthropicAssistant(Assistant):
         self.tb = toolbox
         self.tool_schemas = self.tb.anthropic_schemas
         self.messages: list[dict] = []
-        self.max_tokens = 4096
+        self.max_tokens = 8192
         self.system_prompt = system_prompt
 
         self.cb = callback_handler
@@ -267,11 +264,6 @@ class AnthropicAssistant(Assistant):
             
     def printMessagesRaw(self) -> None:
         print(json.dumps(self.messages, indent=4))
-    
-    def getLastMessageContent(self) -> str:
-        if self.messages:
-            return self.messages[-1]["content"][-1]['text']
-        return ""
     
     def getConversationHistory(self) -> list[dict]:
         """Extract conversation history in a unified format for UI display"""
