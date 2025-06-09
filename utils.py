@@ -34,7 +34,7 @@ def makeNewStoryDir(story_name: str):
     os.mkdir(f"./stories/{story_name}")
 
 def getFullInstructionMessage() -> str:
-    with open("instructions.md", 'r') as file:
+    with open("instructions/instructions.md", 'r') as file:
         content = file.read()
     return content
 

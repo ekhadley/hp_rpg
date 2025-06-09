@@ -50,8 +50,8 @@ This is a Harry Potter-themed RPG application with both web and terminal interfa
 ### Game System Integration
 
 **Instructions and Ruleset**:
-- `instructions.md`: Complete Harry Potter RPG ruleset with D&D-inspired mechanics
-- `planning_guide.md`: AI storytelling guidelines for narrative consistency
+- `instructions/instructions.md`: Complete Harry Potter RPG ruleset with D&D-inspired mechanics
+- `instructions/planning_guide.md`: AI storytelling guidelines for narrative consistency
 - Stories stored in `./stories/{story_name}/` with character sheets, plans, and history
 
 **Story Management**:
@@ -83,9 +83,10 @@ This is a Harry Potter-themed RPG application with both web and terminal interfa
 ## File Structure Context
 
 - `stories/`: Individual story directories with game state - not tracked in git
-- `app/`: Web interface assets (templates, static files)  
-- `instructions.md`: Complete Harry Potter RPG ruleset (35KB+ comprehensive game mechanics)
-- `planning_guide.md`: AI storytelling guidelines for narrative consistency
+- `app/`: Web interface assets (templates, static files)
+- `instructions/`: Game instruction files and AI storytelling guidelines
+  - `instructions.md`: Complete Harry Potter RPG ruleset (470+ lines, comprehensive game mechanics)
+  - `planning_guide.md`: AI storytelling guidelines for narrative consistency (140+ lines)
 - Root Python files: Core application logic and abstractions
 
 ## Model Configuration
