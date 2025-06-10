@@ -1,6 +1,6 @@
 import os
 from flask_socketio import SocketIO, emit
-from flask import Flask, render_template, redirect, url_for, request
+from flask import Flask, render_template
 
 from utils import *
 from api import makeAssistant
@@ -41,7 +41,7 @@ def select_story(data):
         #model_name = "gpt-4.1",
         toolbox = story_tb,
         callback_handler = WebCallbackHandler(socket),
-        system_prompt = getFullInstructionMessage()
+        system_prompt = getFullStoryInstruction(story_name)
     )
 
     history_exists = asst.load(story_history_path)
