@@ -234,7 +234,7 @@ class AnthropicAssistant(Assistant):
         self.tb = toolbox
         self.tool_schemas = self.tb.anthropic_schemas
         self.messages: list[dict] = []
-        self.max_tokens = 8192
+        self.max_tokens = 16384
         self.system_prompt = system_prompt
 
         self.cb = callback_handler

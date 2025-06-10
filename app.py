@@ -26,6 +26,7 @@ def select_story(data):
         model_tools.read_story_planning_guide,
         model_tools.list_story_files_tool_handler,
         model_tools.write_story_file_tool_handler,
+        model_tools.append_story_file_tool_handler,
         model_tools.read_story_file_tool_handler,
         model_tools.roll_dice_tool_handler,
     ], default_kwargs={"current_story": story_name})

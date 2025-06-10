@@ -158,6 +158,19 @@ def write_story_file_tool_handler(file_name: str, contents: str, **kwargs) -> st
     if exists: return "File edited successfully."
     else: return "File saved successfully."
 
+def append_story_file_tool_handler(file_name: str, contents: str, **kwargs) -> str:
+    """append_file: Append contents to the end of an existing file in the current story directory. If the file doesn't exist, it will be created.
+    file_name (string): Name of the file to append to. Should be a markdown file, ending in '.md'. Should not be a part of any subfolder.
+    contents (string): The contents to append to the file. Do not include backticks around the contents to be appended.
+    """
+    if not file_name.endswith(".md"):
+        file_name += ".md"
+    exists = os.path.exists(f"./stories/{kwargs['current_story']}/{file_name}")
+    with open(f"./stories/{kwargs['current_story']}/{file_name}", 'a') as file:
+        file.write(contents)
+    if exists: return "Contents appended to file successfully."
+    else: return "File created and contents added successfully."
+
 def _summarize_story_tool_handler(contents: str, **kwargs) -> str:
     """summarize_story: This will overwrite the contents of the story_summary.md file with the contents provided. 
     contents (string): The contents to write to the story summary file. Do not include backticks around the contents to be saved.
