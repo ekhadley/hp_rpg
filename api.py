@@ -321,9 +321,17 @@ class AnthropicAssistant(Assistant):
         return False
     
     def addUserMessage(self, content) -> None:
-        self.messages.append({"role": "user", "content": content})
+        self.messages.append({
+            "role": "user",
+            "content": content,
+            "cache_control": {"type": "ephemeral"}
+        })
     def addAssistantMessage(self, content) -> None:
-        self.messages.append({"role": "assistant", "content": content})
+        self.messages.append({
+            "role": "assistant",
+            "content": content,
+            "cache_control": {"type": "ephemeral"}
+        })
 
     def getStream(self):
         return self.client.messages.stream(
