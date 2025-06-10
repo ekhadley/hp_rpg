@@ -167,7 +167,7 @@ def append_story_file_tool_handler(file_name: str, contents: str, **kwargs) -> s
         file_name += ".md"
     exists = os.path.exists(f"./stories/{kwargs['current_story']}/{file_name}")
     with open(f"./stories/{kwargs['current_story']}/{file_name}", 'a') as file:
-        file.write(contents)
+        file.write("\n" + contents)
     if exists: return "Contents appended to file successfully."
     else: return "File created and contents added successfully."
 

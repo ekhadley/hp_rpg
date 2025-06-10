@@ -236,6 +236,13 @@ class AnthropicAssistant(Assistant):
         self.messages: list[dict] = []
         self.max_tokens = 16384
         self.system_prompt = system_prompt
+        self.system = [
+            {
+                "type": "text",
+                "text": system_prompt,
+                "cache_control": {"type": "ephemeral"}
+            },
+        ]
 
         self.cb = callback_handler
     
@@ -324,22 +331,22 @@ class AnthropicAssistant(Assistant):
         self.messages.append({
             "role": "user",
             "content": content,
-            "cache_control": {"type": "ephemeral"}
+            #"cache_control": {"type": "ephemeral"}
         })
     def addAssistantMessage(self, content) -> None:
         self.messages.append({
             "role": "assistant",
             "content": content,
-            "cache_control": {"type": "ephemeral"}
+            #"cache_control": {"type": "ephemeral"}
         })
 
     def getStream(self):
         return self.client.messages.stream(
-                max_tokens=self.max_tokens,
-                messages=self.messages,
-                system=self.system_prompt,
                 model=self.model_name,
-                tools=self.tool_schemas
+                system=self.system,
+                tools=self.tool_schemas,
+                messages=self.messages,
+                max_tokens=self.max_tokens,
             )
 
     def run(self) -> None: 
