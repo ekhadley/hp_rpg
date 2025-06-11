@@ -95,9 +95,23 @@ socket.on('conversation_history', function(data) {
     // Render each message in chronological order
     data.history.forEach(function(message) {
         if (message.role === 'user') {
-            addUserMessage(message.content, false); // Don't disable input when loading history
+            if (message.content != "<|begin_conversation|>") {
+                addUserMessage(message.content, false);
+            }
         } else if (message.role === 'assistant') {
             addAssistantMessageFromHistory(message.content);
+        } else if (message.type == "function_call") {
+            tool_name = message.name,
+            tool_arguments = message.arguments
+        } else if (message.type == "function_call_output") {
+            tool_call = {
+                tools: [{
+                    name: tool_name,
+                    inputs: JSON.parse(tool_arguments),
+                    result: message.output
+                }]
+            }
+            addToolUseToHistory(tool_call);
         }
         // Add to local conversation history
         conversationHistory.push({
@@ -190,50 +204,37 @@ socket.on('tool_request', function(data) {
     accumulatedContent = '';
 });
 
-socket.on('tool_submit', function(data) {
+socket.on('tool_submit', addToolUseToHistory);
+function addToolUseToHistory(data) {
+//socket.on('tool_submit', function(data) {
     accumulatedContent = '';
     const typingIndicator = document.querySelector('.typing-indicator');
     if (typingIndicator) {
         typingIndicator.remove();
     }
-    console.log('Tool output:', data);
+    console.log('Tool submitted:', data);
     
     // Display tool operations directly in chat
     data.tools.forEach(tool => {
-        // Only show dice rolls with their results, other tools just show a brief message
+        const toolElement = document.createElement('div');
         if (tool.name === 'roll_dice') {
-            const diceElement = document.createElement('div');
-            diceElement.className = 'dice-roll';
-            console.log(tool)
-            diceElement.innerHTML = `🎲 Rolled ${tool.inputs.dice}: <strong>${tool.result}</strong>`;
-            chatHistory.appendChild(diceElement);
-            
-            // Add tool use to conversation history
-            conversationHistory.push({
-                role: 'tool',
-                name: tool.name,
-                inputs: tool.inputs,
-                result: tool.result,
-                timestamp: new Date().toISOString()
-            });
+            toolElement.className = 'dice-roll';
+            toolElement.innerHTML = `🎲 Rolled ${tool.inputs.dice}: <strong>${tool.result}</strong>`;
+            chatHistory.appendChild(toolElement);
         } else {
-            // For other tools, just show a simple message
-            const toolElement = document.createElement('div');
             toolElement.className = 'tool-message';
             toolElement.innerHTML = `Used ${tool.name}...`;
-            chatHistory.appendChild(toolElement);
-            
-            // Add tool use to conversation history
-            conversationHistory.push({
-                role: 'tool',
-                name: tool.name,
-                inputs: tool.inputs,
-                result: tool.result,
-                timestamp: new Date().toISOString()
-            });
         }
+        chatHistory.appendChild(toolElement);
+        conversationHistory.push({
+            role: 'tool',
+            name: tool.name,
+            inputs: tool.inputs,
+            result: tool.result,
+            timestamp: new Date().toISOString()
+        });
     });
-});
+}
 
 socket.on('turn_end', function() {
     // Add narrator's complete response to conversation history

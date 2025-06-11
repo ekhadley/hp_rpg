@@ -51,7 +51,7 @@ class OpenAIAssistant(Assistant):
     def save(self, path: str) -> None:
         if not os.path.exists(path):
             with open(path, "w+") as f:
-                json.dump({"messages": self.messages}, f)
+                json.dump({"messages": self.messages}, f, indent=4)
         else:
             with open(path, "r+") as f:
                 data = json.load(f)
@@ -173,7 +173,7 @@ class AnthropicAssistant(Assistant):
     def save(self, path: str) -> None:
         if not os.path.exists(path):
             with open(path, "w+") as f:
-                json.dump({"messages": self.messages}, f)
+                json.dump({"messages": self.messages}, f, indent=4)
         else:
             with open(path, "r+") as f:
                 data = json.load(f)
@@ -215,9 +215,7 @@ class AnthropicAssistant(Assistant):
                     content = [content.to_dict() for content in message.content]
                     self.addAssistantMessage(content)
                     if message.stop_reason == "tool_use":
-                        tool_names = []
-                        tool_inputss = []
-                        tool_results = []
+                        tool_names, tool_inputss, tool_results = [], [], []
                         for block in message.content:
                             if block.type == "tool_use":
                                 tool_name = block.name
