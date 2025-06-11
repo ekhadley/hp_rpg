@@ -34,9 +34,9 @@ def select_story(data):
     asst = makeAssistant(
         #model_name = "claude-3-7-sonnet-20250219",
         #model_name = "claude-opus-4-20250514",
-        model_name = "claude-sonnet-4-20250514",
+        #model_name = "claude-sonnet-4-20250514",
         #model_name = "claude-3-haiku-20240307",
-        #model_name = "gpt-4o-mini",
+        model_name = "gpt-4o-mini",
         #model_name = "gpt-4o-",
         #model_name = "gpt-4.1",
         toolbox = story_tb,
@@ -76,4 +76,4 @@ def index():
     return render_template('index.html', stories=listStoryNames())
 
 if __name__ == "__main__":
-    socket.run(app, debug=True, port=5001)
+    socket.run(app, port=5001)

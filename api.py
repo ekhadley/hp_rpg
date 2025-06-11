@@ -46,7 +46,7 @@ class OpenAIAssistant(Assistant):
             instructions = system_prompt,
             model = self.model_name,
             tools = self.tool_schemas,
-            temperature=0.8,
+            temperature=0.9,
             top_p=0.95
         )
         self.assistant_id = self.assistant.id
