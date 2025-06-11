@@ -204,6 +204,7 @@ socket.on('tool_submit', function(data) {
         if (tool.name === 'roll_dice') {
             const diceElement = document.createElement('div');
             diceElement.className = 'dice-roll';
+            console.log(tool)
             diceElement.innerHTML = `🎲 Rolled ${tool.inputs.dice}: <strong>${tool.result}</strong>`;
             chatHistory.appendChild(diceElement);
             

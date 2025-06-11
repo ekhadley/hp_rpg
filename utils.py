@@ -20,8 +20,7 @@ endc = '\033[0m'
 def debug() -> bool:
     return os.environ.get("DEBUG", "0").lower() == "1"
 
-def truncate_for_debug(obj, max_length=200):
-    """Truncate object representation for debug output"""
+def truncateForDebug(obj, max_length=200):
     obj_str = str(obj)
     if len(obj_str) <= max_length:
         return obj_str

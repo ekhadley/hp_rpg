@@ -48,15 +48,13 @@ class Tool:
         self.arg_properties = handler_props['arg_properties']
         self.openai_schema = {
             "type": "function",
-            "function": {
-                "name": self.name,
-                "description": self.description,
-                "parameters": {
-                    "type": "object",
-                    "properties": self.arg_properties,
-                    "required": [key for key in self.arg_properties.keys()]
-                },
-            }
+            "name": self.name,
+            "description": self.description,
+            "parameters": {
+                "type": "object",
+                "properties": self.arg_properties,
+            },
+            "required": [key for key in self.arg_properties.keys()]
         }
         self.anthropic_schema = {
             "name": self.name,
@@ -64,18 +62,16 @@ class Tool:
             "input_schema": {
                 "type": "object",
                 "properties": self.arg_properties,
-                # Required fields are determined by the keys in arg_properties
                 "required": [key for key in self.arg_properties.keys()]
             }
         }
-
         self.kwargs = default_kwargs
 
     def getResult(self, parameters: dict) -> str:
         try:
-            if debug(): print(pink, f"calling tool '{self.name}' with parameters {parameters}", endc)
+            #if debug(): print(pink, f"calling tool '{self.name}' with parameters {parameters}", endc)
             tool_result = str(self.handler(**parameters, **self.kwargs))
-            if debug(): print(pink, f"tool returned: '{tool_result}'", endc)
+            #if debug(): print(pink, f"tool returned: '{tool_result}'", endc)
             return tool_result
         except Exception as e:
             if debug(): print(bold, red, f"error in tool {self.name}: {str(e)}", endc)
@@ -196,7 +192,7 @@ def read_story_plan_tool_handler(**kwargs) -> str:
 def read_story_planning_guide(**kwargs) -> str:
     """read_story_planning_guide: Read the story planning guide, instructing you how to create a story plan. Only use this if story_plan.md does not alredy exist.
     """
-    with open(f"./planning_guide.md", 'r') as file:
+    with open(f"./instructions/planning_guide.md", 'r') as file:
         content = file.read()
     return content
 

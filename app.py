@@ -37,17 +37,18 @@ def select_story(data):
         #model_name = "claude-sonnet-4-20250514",
         #model_name = "claude-3-haiku-20240307",
         model_name = "gpt-4o-mini",
-        #model_name = "gpt-4o-",
+        #model_name = "gpt-4o",
         #model_name = "gpt-4.1",
         toolbox = story_tb,
         callback_handler = WebCallbackHandler(socket),
-        system_prompt = getFullStoryInstruction(story_name)
+        #system_prompt = getFullStoryInstruction(story_name)
+        system_prompt = "you are a helpful assistant that can use tools."
     )
 
     history_exists = asst.load(story_history_path)
     if history_exists:
         if debug(): print(cyan, "History loaded successfully.", endc)
-        conversation_history = asst.getConversationHistory()
+        conversation_history = asst.messages
         socket.emit('conversation_history', {'history': conversation_history})
     else:
         if debug(): print(cyan, "No history found, initializing new history file.", endc)
