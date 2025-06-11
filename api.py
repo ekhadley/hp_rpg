@@ -26,7 +26,7 @@ class Assistant:
         })
     def save(self, path: str) -> None:
         pass
-    def load(self, path: str) -> bool:
+    def load(self, path: str) -> list[dict] | None:
         pass
     def getStream(self):
         pass
@@ -57,27 +57,28 @@ class OpenAIAssistant(Assistant):
                 data = json.load(f)
                 data["messages"] = self.messages
                 f.seek(0)
-                json.dump(data, f)
-    # converts to openai format upon save. This means content field is a string, and tool calls are separate, top level messages with the assistant role
-    def load(self, path: str) -> bool:
+                json.dump(data, f, indent=4)
+
+    def load(self, path: str) -> list[dict] | None:
         if os.path.exists(path):
             with open(path) as f:
                 data = json.load(f)
                 if "messages" in data:
                     self.messages = data["messages"]
-                    return True
+                    return self.messages
+        return None
 
-    def submitToolCall(self, call_event) -> None:
+    def submitToolCall(self, tool_name: str, arguments: dict, call_id: str) -> None:
         self.messages.append({
             "type": "function_call",
-            "name": call_event.name,
-            "arguments": call_event.arguments,
-            "call_id": call_event.call_id
+            "name": tool_name,
+            "arguments": arguments,
+            "call_id": call_id
         })
-    def submitToolOutputs(self, call_event: str, tool_outputs: dict) -> None:
+    def submitToolOutputs(self, call_id: str, tool_outputs: dict) -> None:
         self.messages.append({
             "type": "function_call_output",
-            "call_id": call_event.call_id,
+            "call_id": call_id,
             "output": str(tool_outputs)
         })
 
@@ -111,8 +112,8 @@ class OpenAIAssistant(Assistant):
                         result = self.tb.getToolResult(call.name, arguments)
                         if debug(): print(pink, f"tool call completed: {call.name}({truncateForDebug(arguments)}) with result: {truncateForDebug(result)}", endc)
                         self.cb.tool_submit(names=[call.name], inputs=[arguments], results=[result])
-                        self.submitToolCall(call)
-                        self.submitToolOutputs(call, result)
+                        self.submitToolCall(call.name, call.arguments, call.call_id) # call args should be string, ugh
+                        self.submitToolOutputs(call.call_id, result)
                         stream.close()
                         self.run()
                         return
@@ -149,45 +150,117 @@ class AnthropicAssistant(Assistant):
         ]
         self.cb = callback_handler
 
-    def convertMessageFormat(self) -> list[dict]:
-        # converts messages to openai format
-        converted_messages = []
+    # converts stored message history to the openai format
+    def convertToOAIFormat(self) -> list[dict]: 
+        messages = []
         for message in self.messages:
-            if message["role"] == "user":
-                converted_messages.append({
+            role = message.get("role", None)
+            content = message.get("content", None)
+            if role == "user": # user messages or tool results
+                if isinstance(content, str):
+                    messages.append({
+                        "role": "user",
+                        "content": content
+                    })
+                else:
+                    text_content = [c for c in content if c["type"] == "text"]
+                    if len(text_content) != 0:
+                        content_str = "".join([c["text"] for c in text_content])
+                        messages.append({
+                            "role": "user",
+                            "content": content_str
+                        })
+
+                    tool_results = [c for c in content if c["type"] == "tool_result"]
+                    for result in tool_results:
+                        messages.append({
+                            "type": "function_call_output",
+                            "call_id": result["tool_use_id"],
+                            "output": result["content"]
+                        })
+            elif role == "assistant": # assistant messages or tool calls
+                text_content = [c for c in content if c["type"] == "text"]
+                if len(text_content) != 0:
+                    content_str = "".join([c["text"] for c in text_content])
+                    messages.append({
+                        "role": "assistant",
+                        "content": content_str
+                    })
+                tool_calls = [c for c in content if c["type"] == "tool_use"]
+                for tool_call in tool_calls:
+                    messages.append({
+                        "type": "function_call",
+                        "name": tool_call["name"],
+                        "arguments": json.dumps(tool_call["input"]),
+                        "call_id": tool_call["id"]
+                    })
+            elif role is not None:
+                raise ValueError(f"Unknown message type: {message['role']}")
+        return messages
+
+    def convertFromOAIFormat(self, original_messages) -> list[dict]: 
+        messages = []
+
+        for i, message in enumerate(original_messages):
+            role = message.get("role", None)
+            content = message.get("content", None)
+            type = message.get("type", None)
+            if role == "user":
+                messages.append({
                     "role": "user",
-                    "content": message["content"]
-                })
-            elif message["role"] == "assistant":
-                content = message["content"]
-                text_content = [c for c in content if content["type"] == "text"]
-                content_str = "".join([c["text"] for c in text_content])
-                converted_messages.append({
-                    "role": "assistant",
                     "content": content
                 })
-            else:
-                raise ValueError(f"Unknown role: {message['role']}")
-        return converted_messages
-        
+            elif role == "assistant":
+                messages.append({
+                    "role": "assistant",
+                    "content": [{
+                        "type": "text",
+                        "text": content
+                    }]
+                })
+            elif type == "function_call":
+                messages.append({
+                    "role": "assistant",
+                    "content": [{
+                        "type": "tool_use",
+                        "name": message["name"],
+                        "input": json.loads(message["arguments"]),
+                        "id": message["call_id"]
+                    }]
+                })
+            elif type == "function_call_output":
+                messages.append({
+                    "role": "user",
+                    "content": [{
+                        "type": "tool_result",
+                        "tool_use_id": message["call_id"],
+                        "content": message["output"]
+                    }]
+                })
+
+        return messages
+
     def save(self, path: str) -> None:
+        converted_messages = self.convertToOAIFormat()
         if not os.path.exists(path):
             with open(path, "w+") as f:
-                json.dump({"messages": self.messages}, f, indent=4)
+                json.dump({"messages": converted_messages}, f, indent=4)
         else:
             with open(path, "r+") as f:
                 data = json.load(f)
-                data["messages"] = self.messages
+                data["messages"] = converted_messages
                 f.seek(0)
-                json.dump(data, f)
-    # converts to openai format upon save. This means content field is a string, and tool calls are separate, top level messages with the assistant role
-    def load(self, path: str) -> bool:
+                json.dump(data, f, indent=4)
+    
+    def load(self, path: str) -> list[dict] | None: # importantly, returns messages in the original (OAI) format
         if os.path.exists(path):
             with open(path) as f:
                 data = json.load(f)
                 if "messages" in data:
-                    self.messages = data["messages"]
-                    return True
+                    messages = data["messages"]
+                    self.messages = self.convertFromOAIFormat(messages)
+                    return messages
+        return None
     
     def getStream(self):
         return self.client.messages.stream(

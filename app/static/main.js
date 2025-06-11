@@ -86,14 +86,14 @@ if (messageForm) {
     });
 }
 
-socket.on('conversation_history', function(data) {
-    console.log('Loading conversation history:', data.history);
+socket.on('conversation_history', function(history) {
+    console.log('Loading conversation history:', history);
     
     // Clear existing conversation history in UI
     conversationHistory = [];
     
     // Render each message in chronological order
-    data.history.forEach(function(message) {
+    history.forEach(function(message) {
         if (message.role === 'user') {
             if (message.content != "<|begin_conversation|>") {
                 addUserMessage(message.content, false);
@@ -104,6 +104,9 @@ socket.on('conversation_history', function(data) {
             tool_name = message.name,
             tool_arguments = message.arguments
         } else if (message.type == "function_call_output") {
+            console.log(tool_arguments);
+            console.log(typeof tool_arguments);
+            console.log(JSON.parse(tool_arguments));
             tool_call = {
                 tools: [{
                     name: tool_name,
