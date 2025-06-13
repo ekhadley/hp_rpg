@@ -23,7 +23,6 @@ def select_story(data):
     story_name = data['selected_story']
     story_history_path = f"./stories/{story_name}/history.json"
     story_tb = model_tools.Toolbox([ # for actually playing the game
-        model_tools.read_story_planning_guide,
         model_tools.list_story_files_tool_handler,
         model_tools.write_story_file_tool_handler,
         model_tools.append_story_file_tool_handler,
@@ -34,11 +33,11 @@ def select_story(data):
     asst = makeAssistant(
         #model_name = "claude-3-7-sonnet-20250219",
         #model_name = "claude-opus-4-20250514",
-        model_name = "claude-sonnet-4-20250514",
+        #model_name = "claude-sonnet-4-20250514",
         #model_name = "claude-3-haiku-20240307",
         #model_name = "gpt-4o-mini",
         #model_name = "gpt-4o",
-        #model_name = "gpt-4.1",
+        model_name = "gpt-4.1-2025-04-14",
         toolbox = story_tb,
         callback_handler = WebCallbackHandler(socket),
         system_prompt = getFullStoryInstruction(story_name)

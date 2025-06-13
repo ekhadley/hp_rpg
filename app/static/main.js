@@ -72,6 +72,7 @@ if (messageForm) {
         e.preventDefault();
         const message = userInput.value.trim();
         if (message) {
+        //if (true) {
             socket.emit('user_message', { message });
             userInput.value = '';
 
