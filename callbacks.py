@@ -1,4 +1,3 @@
-import time
 from flask_socketio import SocketIO
 from utils import *
 
@@ -14,6 +13,10 @@ def example_tool_submit_callback(names: list[str], inputs: list[dict], results: 
 class CallbackHandler:
     def text_output(self, text):
         pass
+    def think_output(self, text):
+        pass
+    def think_end(self):
+        pass
     def tool_request(self, name:str, inputs: dict):
         pass
     def tool_submit(self, names: list[str], inputs: list[dict], results: list[str]):
@@ -22,17 +25,27 @@ class CallbackHandler:
         pass
 
 class TerminalPrinter(CallbackHandler): # streams text into the terminal in nice blocks.
-    def __init__(self, assistant_color=brown, tool_color=cyan, user_color=white):
+    def __init__(self, assistant_color=brown, tool_color=cyan, user_color=white, thinking_color=gray):
         self.assistant_color = assistant_color
         self.user_color = user_color
         self.tool_color = tool_color
+        self.thinking_color = thinking_color
         self.narrating = False
+        self.thinking = False
     
     def text_output(self, text):
         if not self.narrating:
             self.narrating = True
             print(self.assistant_color, f"Narrator: ")
         print(self.assistant_color, text, sep="", end=self.user_color)
+    def think_output(self, text):
+        if not self.thinking:
+            self.thinking = True
+            print(self.thinking_color, f"Thinking: ", end="")
+        print(self.thinking_color, text, sep="", end=self.user_color)
+    def think_end(self):
+        print()
+        self.thinking = False
     def tool_request(self, name:str, inputs: dict):
         self.narrating = False
         print(self.tool_color, f"Tool requested: {name}({inputs})", endc)
@@ -48,6 +61,17 @@ class WebCallbackHandler(CallbackHandler):
     def __init__(self, socket: SocketIO):
         self.socket = socket
         self.outputting_text = False
+        self.thinking = False
+
+    def think_output(self, text):
+        if not self.thinking:
+            self.thinking = True
+            self.socket.emit('think_start')
+        self.emit('think_output', text=text)
+    
+    def think_end(self):
+        self.thinking = False
+        self.socket.emit('think_end')
 
     def text_output(self, text):
         if not self.outputting_text:

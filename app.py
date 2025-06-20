@@ -3,11 +3,11 @@ from flask_socketio import SocketIO, emit
 from flask import Flask, render_template
 
 from utils import *
-from api import makeAssistant
+from providers import makeAssistant
 import model_tools
 from callbacks import WebCallbackHandler
 
-app = Flask(__name__, template_folder="app/templates", static_folder="app/static")
+app = Flask(__name__, template_folder="frontend/templates", static_folder="frontend/static")
 app.secret_key = os.urandom(24)
 socket = SocketIO(app, cors_allowed_origins="*")
 
@@ -31,13 +31,12 @@ def select_story(data):
     ], default_kwargs={"current_story": story_name})
 
     asst = makeAssistant(
-        #model_name = "claude-3-7-sonnet-20250219",
-        #model_name = "claude-opus-4-20250514",
         #model_name = "claude-sonnet-4-20250514",
         #model_name = "claude-3-haiku-20240307",
+        #model_name = "claude-opus-4-20250514",
+        #model_name = "gpt-4.1-2025-04-14",
+        model_name = "o3-mini-2025-01-31",
         #model_name = "gpt-4o-mini",
-        #model_name = "gpt-4o",
-        model_name = "gpt-4.1-2025-04-14",
         toolbox = story_tb,
         callback_handler = WebCallbackHandler(socket),
         system_prompt = getFullStoryInstruction(story_name)

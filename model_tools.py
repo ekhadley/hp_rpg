@@ -46,7 +46,7 @@ class Tool:
         self.description = handler_props['description']
         self.handler = handler
         self.arg_properties = handler_props['arg_properties']
-        self.openai_schema = {
+        self._openai_schema = {
             "type": "function",
             "name": self.name,
             "description": self.description,
@@ -56,7 +56,7 @@ class Tool:
             },
             "required": [key for key in self.arg_properties.keys()]
         }
-        self.anthropic_schema = {
+        self._anthropic_schema = {
             "name": self.name,
             "description": self.description,
             "input_schema": {
@@ -83,8 +83,6 @@ class Toolbox:
         self.tools = [Tool(handler, default_kwargs) for handler in handlers]
         self.kwargs = default_kwargs
         self.tool_map = {tool.name: tool for tool in self.tools}
-        self.openai_schemas = [tool.openai_schema for tool in self.tools]
-        self.anthropic_schemas = [tool.anthropic_schema for tool in self.tools]
     
     def getToolResult(self, tool_name: str, parameters: dict) -> str:
         if tool_name in self.tool_map:

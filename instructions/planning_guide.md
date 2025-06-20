@@ -40,7 +40,6 @@ When players do something completely unforeseen:
 - **Identify critical moments** that must happen for your story to make sense
 - **Design "forced encounters"** that feel inevitable rather than arbitrary
 - **Ensure each forced encounter** has multiple possible outcomes
-- **Keep forced encounters minimal** - only what's absolutely necessary
 
 ### Optional World Events
 - **Consider adding 1-2 timed world events** if they enhance narrative tension

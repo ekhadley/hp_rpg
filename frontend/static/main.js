@@ -19,7 +19,9 @@ let conversationHistory = [];
 
 // Variables for managing the narrator's message state
 let currentNarratorMessageElement = null;
+let currentThinkingElement = null;
 let currentStory = null;
+let lastNarratorMessageElement = null;
 
 // Story selection
 if (storyList) {
@@ -96,26 +98,52 @@ socket.on('conversation_history', function(history) {
     // Render each message in chronological order
     history.forEach(function(message) {
         if (message.role === 'user') {
-            if (message.content != "<|begin_conversation|>") {
-                addUserMessage(message.content, false);
+            if (typeof message.content === "string") {
+                if (message.content != "<|begin_conversation|>") {
+                    addUserMessage(message.content, false);
+                }
+            } else {
+                message.content.forEach(element => {
+                    if (element.type == "text") {
+                        addUserMessage(element.content, false);
+                    } else if (element.type == "tool_result") {
+                        tool_call = {
+                            tools: [{
+                                name: tool_name,
+                                inputs: tool_arguments,
+                                result: element.content
+                            }]
+                        }
+                        addToolUseToHistory(tool_call);
+                    }
+                });
             }
         } else if (message.role === 'assistant') {
-            addAssistantMessageFromHistory(message.content);
-        } else if (message.type == "function_call") {
-            tool_name = message.name,
-            tool_arguments = message.arguments
-        } else if (message.type == "function_call_output") {
-            console.log(tool_arguments);
-            console.log(typeof tool_arguments);
-            console.log(JSON.parse(tool_arguments));
-            tool_call = {
-                tools: [{
-                    name: tool_name,
-                    inputs: JSON.parse(tool_arguments),
-                    result: message.output
-                }]
+            let hasThinking = false;
+            let thinkingContent = '';
+            
+            // First pass: check for thinking content
+            message.content.forEach(element => {
+                if (element.type == "thinking") {
+                    hasThinking = true;
+                    thinkingContent = element.thinking;
+                }
+            });
+            
+            // Create thinking dropdown if thinking content exists
+            if (hasThinking) {
+                addThinkingFromHistory(thinkingContent);
             }
-            addToolUseToHistory(tool_call);
+            
+            // Second pass: process other content types
+            message.content.forEach(element => {
+                if (element.type == "text") {
+                    addAssistantMessageFromHistory(element.text);
+                } else if (element.type == "tool_use") {
+                    tool_name = element.name,
+                    tool_arguments = element.input
+                }
+            });
         }
         // Add to local conversation history
         conversationHistory.push({
@@ -134,14 +162,70 @@ socket.on('assistant_ready', function() {
     //currentNarratorMessageElement = null;
 });
 
+socket.on('think_start', function() {
+    console.log('Model started thinking');
+    
+    // Create thinking dropdown container
+    currentThinkingElement = document.createElement('div');
+    currentThinkingElement.className = 'thinking-container';
+
+    // Create header
+    const thinkingHeader = document.createElement('div');
+    thinkingHeader.className = 'thinking-header';
+    
+    const thinkingLabel = document.createElement('div');
+    thinkingLabel.className = 'thinking-label';
+    thinkingLabel.innerHTML = '<i class="fas fa-brain"></i>';
+    
+    const thinkingToggle = document.createElement('div');
+    thinkingToggle.className = 'thinking-toggle';
+    thinkingToggle.innerHTML = '▼';
+    
+    thinkingHeader.appendChild(thinkingLabel);
+    thinkingHeader.appendChild(thinkingToggle);
+    
+    // Create content area
+    const thinkingContent = document.createElement('div');
+    thinkingContent.className = 'thinking-content';
+    
+    // Add click handler for toggle
+    thinkingHeader.addEventListener('click', function() {
+        const isExpanded = thinkingContent.classList.toggle('expanded');
+        thinkingToggle.classList.toggle('expanded', isExpanded);
+    });
+    
+    currentThinkingElement.appendChild(thinkingHeader);
+    currentThinkingElement.appendChild(thinkingContent);
+    chatHistory.appendChild(currentThinkingElement);
+});
+
+socket.on('think_output', function(data) {
+    if (currentThinkingElement) {
+        const thinkingContent = currentThinkingElement.querySelector('.thinking-content');
+        thinkingContent.textContent += data.text;
+        scrollToBottom();
+    }
+});
+
 socket.on('text_start', function() {
     console.log('Narrator switched to outputting text');
     
-    // Create a new narrator message element
-    currentNarratorMessageElement = document.createElement('div');
-    currentNarratorMessageElement.className = 'message narrator-message';
-    currentNarratorMessageElement.style.display = 'none'; // Hide until we get content
-    chatHistory.appendChild(currentNarratorMessageElement);
+    // If we're not retrying (currentNarratorMessageElement is null), create a new message element
+    if (!currentNarratorMessageElement) {
+        currentNarratorMessageElement = document.createElement('div');
+        currentNarratorMessageElement.className = 'message narrator-message';
+        currentNarratorMessageElement.style.display = 'none'; // Hide until we get content
+        chatHistory.appendChild(currentNarratorMessageElement);
+    }
+    
+    // Remove any existing retry buttons from previous messages (only show on last message)
+    const existingRetryButtons = chatHistory.querySelectorAll('.retry-button');
+    existingRetryButtons.forEach(button => {
+        const messageActions = button.closest('.message-actions');
+        if (messageActions) {
+            messageActions.remove();
+        }
+    });
 });
 
 // Store the raw content to avoid extra spaces
@@ -248,9 +332,16 @@ socket.on('turn_end', function() {
             content: accumulatedContent,
             timestamp: new Date().toISOString()
         });
+        
+        // Store reference to last narrator message for retry functionality
+        lastNarratorMessageElement = currentNarratorMessageElement;
+        
+        // Add retry button to the last narrator message
+        addRetryButton(lastNarratorMessageElement);
     }
     
     currentNarratorMessageElement = null;
+    currentThinkingElement = null;
     accumulatedContent = '';
     // Enable user input
     if (userInput) {
@@ -290,6 +381,44 @@ function addUserMessage(message, disableInput = true) {
     if (disableInput && userInput) {
         userInput.disabled = true;
     }
+}
+
+function addThinkingFromHistory(thinkingContent) {
+    if (!chatHistory) return;
+    
+    // Create thinking dropdown container (reuse existing logic)
+    const thinkingElement = document.createElement('div');
+    thinkingElement.className = 'thinking-container';
+
+    // Create header
+    const thinkingHeader = document.createElement('div');
+    thinkingHeader.className = 'thinking-header';
+    
+    const thinkingLabel = document.createElement('div');
+    thinkingLabel.className = 'thinking-label';
+    thinkingLabel.innerHTML = '<i class="fas fa-brain"></i>';
+    
+    const thinkingToggle = document.createElement('div');
+    thinkingToggle.className = 'thinking-toggle';
+    thinkingToggle.innerHTML = '▼';
+    
+    thinkingHeader.appendChild(thinkingLabel);
+    thinkingHeader.appendChild(thinkingToggle);
+    
+    // Create content area
+    const thinkingContentDiv = document.createElement('div');
+    thinkingContentDiv.className = 'thinking-content';
+    thinkingContentDiv.textContent = thinkingContent;
+    
+    // Add click handler for toggle
+    thinkingHeader.addEventListener('click', function() {
+        const isExpanded = thinkingContentDiv.classList.toggle('expanded');
+        thinkingToggle.classList.toggle('expanded', isExpanded);
+    });
+    
+    thinkingElement.appendChild(thinkingHeader);
+    thinkingElement.appendChild(thinkingContentDiv);
+    chatHistory.appendChild(thinkingElement);
 }
 
 function addAssistantMessageFromHistory(content) {
@@ -349,6 +478,64 @@ function hideTypingIndicator() {
     if (typingIndicator) {
         typingIndicator.remove();
     }
+}
+
+function addRetryButton(messageElement) {
+    // Don't add retry button if one already exists
+    if (messageElement.querySelector('.retry-button')) {
+        return;
+    }
+    
+    // Create retry button container
+    const retryContainer = document.createElement('div');
+    retryContainer.className = 'message-actions';
+    
+    // Create retry button
+    const retryButton = document.createElement('button');
+    retryButton.className = 'retry-button';
+    retryButton.innerHTML = '<i class="fas fa-redo"></i>';
+    retryButton.title = 'Retry this response';
+    
+    // Add click handler
+    retryButton.addEventListener('click', function() {
+        handleRetryResponse(messageElement, retryButton);
+    });
+    
+    retryContainer.appendChild(retryButton);
+    messageElement.appendChild(retryContainer);
+}
+
+function handleRetryResponse(messageElement, retryButton) {
+    // Disable retry button during retry
+    retryButton.disabled = true;
+    retryButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    
+    // Disable user input
+    if (userInput) {
+        userInput.disabled = true;
+    }
+    
+    // Remove the last assistant message from conversation history (will be replaced)
+    if (conversationHistory.length > 0 && conversationHistory[conversationHistory.length - 1].role === 'assistant') {
+        conversationHistory.pop();
+    }
+    
+    // Remove current message content but keep the container
+    const messageActions = messageElement.querySelector('.message-actions');
+    messageElement.innerHTML = '';
+    if (messageActions) {
+        messageElement.appendChild(messageActions);
+    }
+    
+    // Set as current narrator message element for new content
+    currentNarratorMessageElement = messageElement;
+    accumulatedContent = '';
+    
+    // Show typing indicator
+    showTypingIndicator();
+    
+    // Request retry from server
+    socket.emit('retry_last_response');
 }
 
 function scrollToBottom() {
