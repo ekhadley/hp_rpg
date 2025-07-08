@@ -1,66 +1,43 @@
 import os
-from flask_socketio import SocketIO, emit
+from flask_socketio import SocketIO
 from flask import Flask, render_template
 
 from utils import *
-from providers import makeAssistant
-import model_tools
-from callbacks import WebCallbackHandler
+from narrator import Narrator
 
 app = Flask(__name__, template_folder="frontend/templates", static_folder="frontend/static")
 app.secret_key = os.urandom(24)
 socket = SocketIO(app, cors_allowed_origins="*")
 
-story_name = None
-story_history_path = None
-asst = None
+narrator = None
 
 @socket.on('select_story')
 def select_story(data):
-    global story_history_path, asst, story_name
+    global narrator
 
     if debug(): print(cyan, f"selected story: '{data}', endc")
     story_name = data['selected_story']
-    story_history_path = f"./stories/{story_name}/history.json"
-    story_tb = model_tools.Toolbox([ # for actually playing the game
-        model_tools.list_story_files_tool_handler,
-        model_tools.write_story_file_tool_handler,
-        model_tools.append_story_file_tool_handler,
-        model_tools.read_story_file_tool_handler,
-        model_tools.roll_dice_tool_handler,
-    ], default_kwargs={"current_story": story_name})
 
-    asst = makeAssistant(
-        #model_name = "claude-sonnet-4-20250514",
-        #model_name = "claude-3-haiku-20240307",
+    narrator = Narrator(
         #model_name = "claude-opus-4-20250514",
-        #model_name = "gpt-4.1-2025-04-14",
-        model_name = "o3-mini-2025-01-31",
+        model_name = "claude-sonnet-4-20250514",
+        #model_name = "claude-3-7-sonnet-latest",
+        #model_name = "claude-3-5-haiku-latest",
+        #model_name = "gpt-4.1",
+        #model_name = "o3-mini",
         #model_name = "gpt-4o-mini",
-        toolbox = story_tb,
-        callback_handler = WebCallbackHandler(socket),
-        system_prompt = getFullStoryInstruction(story_name)
+        socket = socket,
+        thinking = False,
+        story_name = story_name
     )
+    narrator.loadStory()
+    if debug(): print(cyan, "narrator initialized", endc)
 
-    history = asst.load(story_history_path)
-    if history is not None:
-        if debug(): print(cyan, "History loaded successfully.", endc)
-        socket.emit('conversation_history', history)
-    else:
-        if debug(): print(cyan, "No history found, initializing new history file.", endc)
-        asst.addUserMessage("<|begin_conversation|>")
-        asst.run()
-        asst.save(story_history_path)
-    socket.emit('assistant_ready')
-    socket.emit('turn_end')
 
 @socket.on('user_message')
-def user_message(data):
-    asst.addUserMessage(data['message'])
-    asst.run()
-    emit('turn_end')
-    asst.save(story_history_path)
-
+def handle_user_message(data):
+    global narrator
+    narrator.handleUserMessage(data)
 
 @socket.on('create_story')
 def create_story(data):

@@ -95,59 +95,36 @@ socket.on('conversation_history', function(history) {
     // Clear existing conversation history in UI
     conversationHistory = [];
     
-    // Render each message in chronological order
     history.forEach(function(message) {
-        if (message.role === 'user') {
-            if (typeof message.content === "string") {
-                if (message.content != "<|begin_conversation|>") {
-                    addUserMessage(message.content, false);
-                }
+        if (message.type === 'user') {
+            if (message.content != "<|begin_conversation|>") {
+                addUserMessage(message.content, false);
             } else {
-                message.content.forEach(element => {
-                    if (element.type == "text") {
-                        addUserMessage(element.content, false);
-                    } else if (element.type == "tool_result") {
-                        tool_call = {
-                            tools: [{
-                                name: tool_name,
-                                inputs: tool_arguments,
-                                result: element.content
-                            }]
-                        }
-                        addToolUseToHistory(tool_call);
-                    }
-                });
+                addUserMessage(message.content);
             }
-        } else if (message.role === 'assistant') {
-            let hasThinking = false;
-            let thinkingContent = '';
-            
-            // First pass: check for thinking content
-            message.content.forEach(element => {
-                if (element.type == "thinking") {
-                    hasThinking = true;
-                    thinkingContent = element.thinking;
-                }
-            });
-            
-            // Create thinking dropdown if thinking content exists
-            if (hasThinking) {
-                addThinkingFromHistory(thinkingContent);
+        } else if (message.type == "tool_result") {
+            tool_call = {
+                tools: [{
+                    name: tool_name,
+                    inputs: tool_arguments,
+                    result: message.content
+                }]
             }
-            
-            // Second pass: process other content types
-            message.content.forEach(element => {
-                if (element.type == "text") {
-                    addAssistantMessageFromHistory(element.text);
-                } else if (element.type == "tool_use") {
-                    tool_name = element.name,
-                    tool_arguments = element.input
-                }
-            });
+            addToolUseToHistory(tool_call);
+        } else if (message.type === 'assistant') {
+            console.log(message);
+            addAssistantMessageFromHistory(message.content);
+        } else if (message.type == "tool_use") {
+            tool_name = message.name,
+            tool_arguments = message.input
+        } else if (message.type == "thinking") {
+            addThinkingFromHistory(message.content);
+        } else {
+            console.warn('Unknown message type:', message.type);
         }
-        // Add to local conversation history
+        
         conversationHistory.push({
-            role: message.role,
+            role: message.type,
             content: message.content,
             timestamp: message.timestamp || new Date().toISOString()
         });

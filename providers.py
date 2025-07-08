@@ -12,8 +12,11 @@ from callbacks import CallbackHandler
 
 # provider is the llm backend of a narrator
 # It handles all behavior specific to a particular llm provider, such as message history formats, saving/loading, streaming events, and tool definitions.
-# It provides generic responses through the callbacks while streaming for things like text/thinking start and stops, and tool uses
+# It provides generic events through the callbacks while streaming for things like text/thinking start and stops, and tool uses
 # message history is saved on disk and sent to the frontend using the anthropic format.
+
+# switching models mid conversation is NO LONGER supported. The history format saved on disk is now provider specific.
+# The provider has emitHistory for converting its saved format into a simplified format for the app frontend history
 class Provider:
     def __init__( self, model_name: str, toolbox: Toolbox, system_prompt: str, callback_handler: CallbackHandler, thinking: bool):
         pass
@@ -27,29 +30,24 @@ class Provider:
             "role": "assistant",
             "content": content,
         })
-    def saveMessages(self, path: str) -> None:
-        converted = self.convertMessagesOut()
-        if not os.path.exists(path):
-            with open(path, "w+") as f:
-                json.dump({"messages": converted}, f, indent=4)
-        else:
-            with open(path, "r+") as f:
-                data = json.load(f)
-                data["messages"] = converted
-                f.seek(0)
-                json.dump(data, f, indent=4)
-    def loadMessages(self, path: str) -> list[dict] | None:
+    def saveHistory(self, path: str) -> None:
+        with open(path, "w+") as f:
+            json.dump({
+                "model_name": self.model_name,
+                "messages": self.messages,
+            }, f, indent=4)
+    def loadHistory(self, path: str) -> list[dict] | None:
         if os.path.exists(path):
             with open(path) as f:
                 data = json.load(f)
                 if "messages" in data:
-                    raw_messages = data["messages"]
-                    self.messages = self.convertMessagesIn(raw_messages)
-                    return raw_messages
+                    messages = data["messages"]
+                    self.messages = messages
+                    if debug(): print(cyan, "History loaded successfully.", endc)
+                    return messages
+        if debug(): print(cyan, "No history found, initializing new history file.", endc)
         return None
-    def convertMessagesIn(self, messages: list[dict]) -> list[dict]: # convert the given unified format messages into the provider's format
-        pass
-    def convertMessagesOut(self) -> list[dict]: # convert the current saved messages in the provider's format messages into the unified format
+    def emitHistory(self) -> list[dict]:
         pass
     def getStream(self):
         pass
@@ -89,7 +87,7 @@ class OpenAIProvider(Provider):
             tools = self.tool_schemas,
             reasoning = self.thinking_config,
             store = False,
-            include=["reasoning.encrypted_content"],
+            include=["reasoning.encrypted_content"] if self.thinking_enabled else None,
         )
 
     def run(self) -> None:
@@ -176,124 +174,43 @@ class OpenAIProvider(Provider):
             },
             "required": [key for key in tool.arg_properties.keys()]
         } for tool in self.tb.tools]
-    
-    def convertMessagesIn(self, messages: list[dict]) -> list[dict]:
-        converted = []
-        for message in messages:
-            role = message.get("role", None)
-            if role == "user":
-                content = message.get("content", None)
-                if isinstance(content, str):
-                    converted.append({
-                        "role": "user",
-                        "content": content
-                    })
-                elif isinstance(content, list):
-                    for item in content:
-                        item_type = item.get("type", None)
-                        if item_type == "text":
-                            converted.append({
-                                "role": "user",
-                                "content": item["text"]
-                            })
-                        elif item_type == "tool_result":
-                            converted.append({
-                                "type": "function_call_output",
-                                "call_id": item["tool_use_id"],
-                                "output": item["content"]
-                            })
-            elif role == "assistant":
-                content = message.get("content", None)
-                if isinstance(content, str):
-                    converted.append({
-                        "role": "assistant",
-                        "content": content
-                    })
-                elif isinstance(content, list):
-                    for item in content:
-                        item_type = item.get("type", None)
-                        if item_type == "text":
-                            converted.append({
-                                "role": "assistant",
-                                "content": item["text"]
-                            })
-                        elif item_type == "tool_use":
-                            converted.append({
-                                "type": "function_call",
-                                "name": item["name"],
-                                "arguments": json.dumps(item["input"]),
-                                "call_id": item["id"],
-                            })
-                        elif item_type == "thinking": # don't load reasoning traces into the provider's history. They are still sent to the frontend for displaying
-                            converted.append({
-                                "type": "reasoning",
-                                "summary": [{
-                                    "type": "summary_text",
-                                    "text": item["thinking"],
-                                }],
-                                "encrypted_content": item["signature"],
-                                "id": "rs_123",
-                            })
-        print(json.dumps(converted, indent=4)) # debug
-        return converted
                         
-    def convertMessagesOut(self) -> list[dict]: # this has to collect separate user and assistant messages/tool stuff into collated content lists, as per the anthropic format
+    def emitHistory(self) -> list[dict]:
         converted = []
-        current_role = None
-
-        def new_role(converted, current_role, new_role):
-            if current_role != new_role:
-                print(pink, f"changed role from {current_role} to {new_role}", endc)
-                converted.append({
-                    "role": new_role,
-                    "content": []
-                })
 
         for message in self.messages:
             role = message.get("role", None)
             msg_type = message.get("type", None)
             if role == "user": # user messages are always bare strings
                 converted.append({
-                    "role": "user",
+                    "type": "user",
                     "content": message["content"]
                 })
             elif msg_type == "function_call_output": # potentially group multiple tool results
-                new_role(converted, current_role, "user")
-                current_role = "user"
-                converted[-1]["content"].append({
+                converted.append({
                     "type": "tool_result",
-                    "tool_use_id": message["call_id"],
                     "content": message["output"]
                 })
             elif role == "assistant": # these get grouped into an assistant content chain
-                new_role(converted, current_role, "assistant")
-                current_role = "assistant"
-                converted[-1]["content"].append({
-                    "type": "text",
+                converted.append({
+                    "type": "assistant",
                     "content": message["content"]
                 })
             elif msg_type == "function_call":
-                new_role(converted, current_role, "assistant")
-                current_role = "assistant"
-                converted[-1]["content"].append({
+                converted.append({
                     "type": "tool_use",
                     "name": message["name"],
-                    "input": message["arguments"],
-                    "id": message["call_id"]
+                    "input": json.loads(message["arguments"]),
                 })
             elif msg_type == "reasoning":
-                print(red, converted, endc)
-                new_role(converted, current_role, "assistant")
-                print(blue, converted, endc)
-                current_role = "assistant"
                 summary = message.get("summary", [])
                 if len(summary) > 0:
-                    converted[-1]["content"].append({
+                    converted.append({
                         "type": "thinking",
-                        "thinking": "".join([part["text"] for part in summary]),
-                        "signature": message["encrypted_content"]
+                        "content": "".join([part["text"] for part in summary]),
                     })
-                
+        
+        print(json.dumps(converted, indent=4))
         return converted
 
 
@@ -397,10 +314,69 @@ class AnthropicProvider(Provider):
             }
         } for tool in self.tb.tools]
 
-    def convertMessagesIn(self, messages: list[dict]) -> list[dict]: # unified format is the anthropic format.
-        return messages
-    def convertMessagesOut(self):
-        return self.messages
+    def emitHistory(self) -> list[dict]: # unified format is the anthropic format.
+        converted = []
+        for message in self.messages:
+            role = message.get("role", None)
+            content = message.get("content", None)
+            if isinstance(content, str):
+                converted.append({
+                    "type": role,
+                    "content": content,
+                })
+            elif role == "user":
+                for part in content:
+                    part_type = part.get("type", None)
+                    if part_type == "text":
+                        converted.append({
+                            "type": "user",
+                            "content": part["text"],
+                        })
+                    elif part_type == "tool_result":
+                        converted.append({
+                            "type": "tool_result",
+                            "content": part["content"],
+                        })
+            elif role == "assistant":
+                for part in content:
+                    part_type = part.get("type", None)
+                    if part_type == "text":
+                        converted.append({
+                            "type": "assistant",
+                            "content": part["text"],
+                        })
+                    elif part_type == "tool_use":
+                        converted.append({
+                            "type": "tool_use",
+                            "name": part["name"],
+                            "input": part["input"],
+                        })
+                    elif part_type == "thinking":
+                        converted.append({
+                            "type": "thinking",
+                            "content": part["thinking"],
+                        })
+        
+        print(json.dumps(converted, indent=4))
+        return converted
+
+model_providers = {
+    "o3-mini": OpenAIProvider,
+    "o3": OpenAIProvider,
+    "gpt-4.1": OpenAIProvider,
+    "gpt-4.5": OpenAIProvider,
+    "gpt-4o": OpenAIProvider,
+    "gpt-4o-mini": OpenAIProvider,
+    "claude-opus-4-20250514": AnthropicProvider,
+    "claude-sonnet-4-20250514": AnthropicProvider,
+    "claude-3-7-sonnet-latest": AnthropicProvider,
+    "claude-3-5-haiku-latest": AnthropicProvider,
+}
+def getModelProvider(model_name: str) -> Provider:
+    if model_name in model_providers:
+        return model_providers[model_name]
+    else:
+        raise ValueError(f"Model provider for '{model_name}' not found. Recognized models: {list(model_providers.keys())}")
 
 if __name__ == "__main__":
     basic_tb = Toolbox([ # demo
@@ -409,11 +385,12 @@ if __name__ == "__main__":
         model_tools.random_number_tool_handler
     ])
 
-    asst = OpenAIProvider(
-    #asst = AnthropicProvider(
-        #model_name = "claude-3-haiku-20240307",
-        #model_name = "claude-sonnet-4-20250514",
-        model_name = "o3-mini-2025-01-31",
+    #model_name = "claude-3-5-haiku-latest",
+    model_name = "claude-sonnet-4-20250514"
+    #model_name = "o3-mini",
+    #model_name = "gpt-4o-mini",
+    asst = getModelProvider(model_name)(
+        model_name = model_name,
         system_prompt = "You are a helpful assistant that can use tools.",
         thinking = True,
         toolbox = basic_tb,
@@ -422,12 +399,10 @@ if __name__ == "__main__":
 
     #asst.addUserMessage("Hello assistant. Can you generate a random number from 1-10 and add to it the number of files in the current directory? Use your reasoning.")
     #asst.addUserMessage("Hello assistant. How many files are in the current directory?")
-    #asst.addUserMessage("Hello assistant. How are you?")
-    #asst.run()
-
-    asst.loadMessages("./ant_history.json")
-    #asst.saveMessages("./ant_history_out.json")
-
-    asst.addUserMessage("Cool!. Can you now roll a d20?")
+    asst.addUserMessage("Hello assistant. How are you?")
     asst.run()
-    asst.saveMessages("./ant_history_out.json")
+
+    #asst.saveHistory("./oai_history.json")
+
+    #asst.loadHistory("./ant_history.json")
+    #asst.emitHistory()
