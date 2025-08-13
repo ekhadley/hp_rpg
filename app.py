@@ -20,14 +20,15 @@ def select_story(data):
 
     narrator = Narrator(
         #model_name = "claude-opus-4-20250514",
-        model_name = "claude-sonnet-4-20250514",
+        #model_name = "claude-sonnet-4-20250514",
         #model_name = "claude-3-7-sonnet-latest",
         #model_name = "claude-3-5-haiku-latest",
         #model_name = "gpt-4.1",
+        model_name = "gpt-5",
         #model_name = "o3-mini",
         #model_name = "gpt-4o-mini",
         socket = socket,
-        thinking = False,
+        thinking = True,
         story_name = story_name
     )
     narrator.loadStory()

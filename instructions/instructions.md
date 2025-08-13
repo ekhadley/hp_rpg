@@ -7,7 +7,7 @@ This document contains the complete ruleset, spellbook, and narration instructio
 The ruleset of the game largely follows the DnD 5'th edition ruleset, with some major modifications.
 
 ### Character Creation
-- **Stats**: Each character has four primary ability scores ranging from 1 to 20. Start with 40 points to distribute. The stats have an initial **minimum of 8** and a **maximum of 13**.
+- **Stats**: Each character has four primary ability scores ranging from 1 to 20. The stats have an initial **minimum of 8** and a **maximum of 13**. The total points **must not** sum to more than 40.
   - **Magical Prowess (MP)**: Innate magical talent and spellcasting ability.
   - **Physical Prowess (PP)**: Strength, agility, and physical resilience.
   - **Mental Acuity (MA)**: Intelligence, perception, and magical intuition for knowledge and investigation.

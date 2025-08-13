@@ -367,6 +367,7 @@ model_providers = {
     "gpt-4.5": OpenAIProvider,
     "gpt-4o": OpenAIProvider,
     "gpt-4o-mini": OpenAIProvider,
+    "gpt-5": OpenAIProvider,
     "claude-opus-4-20250514": AnthropicProvider,
     "claude-sonnet-4-20250514": AnthropicProvider,
     "claude-3-7-sonnet-latest": AnthropicProvider,
