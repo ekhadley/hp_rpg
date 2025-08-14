@@ -210,7 +210,6 @@ class OpenAIProvider(Provider):
                         "content": "".join([part["text"] for part in summary]),
                     })
         
-        print(json.dumps(converted, indent=4))
         return converted
 
 
@@ -373,6 +372,14 @@ model_providers = {
     "claude-3-7-sonnet-latest": AnthropicProvider,
     "claude-3-5-haiku-latest": AnthropicProvider,
 }
+def model_supports_thinking(model_name: str) -> bool:
+    if model_name.startswith("o3") or model_name.startswith("gpt-5"):
+        return True
+    anthropic_supported = ["opus","sonnet"]
+    if any(token in model_name for token in anthropic_supported):
+        return True
+    return False
+
 def getModelProvider(model_name: str) -> Provider:
     if model_name in model_providers:
         return model_providers[model_name]

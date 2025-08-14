@@ -2,10 +2,10 @@ import os
 import json
 
 
-from utils import getFullStoryInstruction
+from utils import getFullStoryInstruction, debug, yellow, endc
 import model_tools
 from callbacks import WebCallbackHandler
-from providers import Provider, getModelProvider
+from providers import Provider, getModelProvider, model_supports_thinking
 from flask_socketio import SocketIO, emit
 
 
@@ -27,6 +27,11 @@ class Narrator:
         self.socket = socket
         self.provider_class = getModelProvider(model_name)
 
+        if thinking and not model_supports_thinking(model_name):
+            if debug():
+                print(yellow, f"Thinking was enabled but model '{model_name}' does not support it.", endc)
+            thinking = False
+
         self.provider: Provider = self.provider_class(
             model_name=model_name,
             system_prompt=self.story_system_prompt,
@@ -34,7 +39,6 @@ class Narrator:
             toolbox=self.tb,
             callback_handler=WebCallbackHandler(socket)
         )
-
     
     def saveHistory(self):
         self.provider.saveHistory(self.story_history_path)

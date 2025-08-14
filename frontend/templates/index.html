@@ -29,7 +29,36 @@
         }
         
         .chat-wrapper {
-            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.1);
+            box-shadow: none;
+        }
+        /* Model select below title, invisible until hover */
+        .model-select-inline {
+            width: 100%;
+            padding: 6px 16px 0 16px; /* align with chat header padding */
+            background: var(--discord-dark);
+        }
+        .model-select {
+            display: inline-block;
+            width: auto;
+            max-width: none;
+            background-color: transparent;
+            color: var(--discord-text-normal);
+            border: 1px solid transparent;
+            border-radius: 6px;
+            padding: 6px 8px;
+            transition: background-color 0.15s ease, border-color 0.15s ease;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+        }
+        .model-select:hover,
+        .model-select:focus {
+            background-color: var(--discord-darker);
+            border-color: var(--discord-border);
+            outline: none;
+        }
+        .model-select:disabled {
+            pointer-events: none; /* locked-in look same as default (no hover state) */
         }
     </style>
 </head>
@@ -70,6 +99,14 @@
                 <button id="export-button" class="export-button" title="Export conversation to console">
                     <i class="fas fa-code"></i>
                 </button>
+            </div>
+            <div class="model-select-inline" id="model-select-inline">
+                <select id="model-select" class="model-select">
+                    {% for model in models %}
+                    <option value="{{ model }}" {% if model == 'gpt-5' %}selected{% endif %}>{{ model }}</option>
+                    {% endfor %}
+                </select>
+                <span id="model-select-measure" class="model-select-measure" aria-hidden="true"></span>
             </div>
             <div class="chat-container">
                 <div id="chat-history" class="chat-history">

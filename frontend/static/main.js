@@ -13,6 +13,9 @@ const createStoryContainer = document.getElementById('create-story-container');
 const storyList = document.getElementById('story-list');
 const createStoryForm = document.getElementById('create-story-form');
 const exportButton = document.getElementById('export-button');
+const modelSelect = document.getElementById('model-select');
+const modelSelectMeasure = document.getElementById('model-select-measure');
+const modelSelectInline = document.getElementById('model-select-inline');
 
 // Store conversation history
 let conversationHistory = [];
@@ -30,7 +33,8 @@ if (storyList) {
         if (storyItem) {
             let storyTitle = storyItem.getAttribute('data-story');
             console.log('Selected story:', storyTitle);
-            socket.emit('select_story', { "selected_story": storyTitle });
+            const modelName = modelSelect ? modelSelect.value : undefined;
+            socket.emit('select_story', { "selected_story": storyTitle, "model_name": modelName });
             // Clear chat history when switching stories
             if (document.getElementById('current-story-title')) {
                 document.getElementById('current-story-title').textContent = storyTitle;
@@ -46,9 +50,20 @@ if (storyList) {
                 chatHeader.style.display = 'flex';
             }
             showTypingIndicator();
+            if (modelSelect) modelSelect.disabled = true; // lock immediately; backend will confirm actual model
+            if (modelSelectInline) modelSelectInline.style.paddingTop = '0'; // tuck it under title without extra gap
         }
     });
 }
+// When backend confirms/locks a model for this story, reflect it in the UI
+socket.on('model_locked', function(data) {
+    if (modelSelect && data && data.model_name) {
+        modelSelect.value = data.model_name;
+        modelSelect.disabled = true;
+        if (modelSelectInline) modelSelectInline.style.paddingTop = '0';
+    }
+});
+
 
 // New story button
 if (newStoryBtn) {
@@ -328,11 +343,16 @@ socket.on('turn_end', function() {
 });
 
 function addNewStory(story) {
-    const storyItem = document.createElement('div');
-    storyItem.className = 'story-item';
-    storyItem.setAttribute('data-story', story.story);
-    storyItem.textContent = story.story_name;
-    storyList.appendChild(storyItem);
+    const li = document.createElement('li');
+    li.className = 'story-item';
+    li.setAttribute('data-story', story.story_name);
+    const icon = document.createElement('i');
+    icon.className = 'fas fa-book';
+    const span = document.createElement('span');
+    span.textContent = story.story_name;
+    li.appendChild(icon);
+    li.appendChild(span);
+    storyList.appendChild(li);
 }
 
 // Helper functions
@@ -530,5 +550,37 @@ window.onload = function() {
     // Add event listener for export button
     if (exportButton) {
         exportButton.addEventListener('click', exportConversation);
+    }
+
+    // Adaptive width for model select based on current selection text
+    if (modelSelect && modelSelectMeasure) {
+        const updateSelectWidth = () => {
+            const selectedText = modelSelect.options[modelSelect.selectedIndex]?.text || '';
+            modelSelectMeasure.textContent = selectedText;
+            const computed = window.getComputedStyle(modelSelect);
+            const paddingLeft = parseFloat(computed.paddingLeft) || 0;
+            const paddingRight = parseFloat(computed.paddingRight) || 0;
+            const borderLeft = parseFloat(computed.borderLeftWidth) || 0;
+            const borderRight = parseFloat(computed.borderRightWidth) || 0;
+            const extra = paddingLeft + paddingRight + borderLeft + borderRight + 12; // small buffer
+            modelSelect.style.width = (modelSelectMeasure.offsetWidth + extra) + 'px';
+        };
+        // Create hidden measurer styles
+        modelSelectMeasure.style.visibility = 'hidden';
+        modelSelectMeasure.style.whiteSpace = 'nowrap';
+        modelSelectMeasure.style.position = 'absolute';
+        modelSelectMeasure.style.pointerEvents = 'none';
+        // Match font styles
+        const syncMeasureStyle = () => {
+            const cs = window.getComputedStyle(modelSelect);
+            modelSelectMeasure.style.fontFamily = cs.fontFamily;
+            modelSelectMeasure.style.fontSize = cs.fontSize;
+            modelSelectMeasure.style.fontWeight = cs.fontWeight;
+            modelSelectMeasure.style.letterSpacing = cs.letterSpacing;
+        };
+        syncMeasureStyle();
+        updateSelectWidth();
+        modelSelect.addEventListener('change', updateSelectWidth);
+        window.addEventListener('resize', () => { syncMeasureStyle(); updateSelectWidth(); });
     }
 };

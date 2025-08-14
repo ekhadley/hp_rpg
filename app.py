@@ -1,9 +1,11 @@
 import os
-from flask_socketio import SocketIO
+import json
+from flask_socketio import SocketIO, emit
 from flask import Flask, render_template
-
+from providers import model_providers
 from utils import *
 from narrator import Narrator
+ 
 
 app = Flask(__name__, template_folder="frontend/templates", static_folder="frontend/static")
 app.secret_key = os.urandom(24)
@@ -17,22 +19,30 @@ def select_story(data):
 
     if debug(): print(cyan, f"selected story: '{data}', endc")
     story_name = data['selected_story']
+    requested_model = data.get('model_name', None)
+
+    # Determine model to use for this story
+    model_name = requested_model if requested_model else "gpt-5"
+    history_path = f"./stories/{story_name}/history.json"
+    if os.path.exists(history_path):
+        try:
+            with open(history_path) as f:
+                history_data = json.load(f)
+                saved_model = history_data.get("model_name")
+                if saved_model:
+                    model_name = saved_model
+        except Exception:
+            pass
 
     narrator = Narrator(
-        #model_name = "claude-opus-4-20250514",
-        #model_name = "claude-sonnet-4-20250514",
-        #model_name = "claude-3-7-sonnet-latest",
-        #model_name = "claude-3-5-haiku-latest",
-        #model_name = "gpt-4.1",
-        model_name = "gpt-5",
-        #model_name = "o3-mini",
-        #model_name = "gpt-4o-mini",
+        model_name = model_name,
         socket = socket,
         thinking = True,
         story_name = story_name
     )
     narrator.loadStory()
     if debug(): print(cyan, "narrator initialized", endc)
+    emit('model_locked', {"model_name": model_name})
 
 
 @socket.on('user_message')
@@ -48,7 +58,7 @@ def create_story(data):
 
 @app.route('/')
 def index():
-    return render_template('index.html', stories=listStoryNames())
+    return render_template('index.html', stories=listStoryNames(), models=list(model_providers.keys()))
 
 if __name__ == "__main__":
     socket.run(app, port=5001)
