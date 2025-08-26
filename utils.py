@@ -27,7 +27,7 @@ def truncateForDebug(obj, max_length=200):
     return obj_str[:max_length] + "..."
 
 def listStoryNames() -> list[str]:
-    return os.listdir("./stories")
+    return sorted(os.listdir("./stories"))
 
 def makeNewStoryDir(story_name: str):
     os.mkdir(f"./stories/{story_name}")
