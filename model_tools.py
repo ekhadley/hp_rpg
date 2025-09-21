@@ -45,13 +45,15 @@ class Tool:
         self.arg_properties = handler_props['arg_properties']
         self.schema = {
             "type": "function",
-            "name": self.name,
-            "description": self.description,
-            "parameters": {
-                "type": "object",
-                "properties": self.arg_properties,
-                "required": [key for key in self.arg_properties.keys()],
-            },
+            "function": {
+                "name": self.name,
+                "description": self.description,
+                "parameters": {
+                    "type": "object",
+                    "properties": self.arg_properties,
+                    "required": [key for key in self.arg_properties.keys()],
+                },
+            }
         }
         self.kwargs = default_kwargs
 

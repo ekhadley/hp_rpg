@@ -19,7 +19,7 @@ def makeStoryToolbox(story_name: str) -> model_tools.Toolbox:
 
     
 class Narrator:
-    def __init__(self, model_name: str, socket: SocketIO, thinking: bool, story_name: str = None):
+    def __init__(self, model_name: str, socket: SocketIO, thinking_effort: str, story_name: str = None):
         self.tb = makeStoryToolbox(story_name)
         self.story_system_prompt = getFullStoryInstruction(story_name)
         self.story_history_path = f"./stories/{story_name}/history.json"
@@ -28,25 +28,34 @@ class Narrator:
         self.provider = OpenRouterProvider(
             model_name=model_name,
             system_prompt=self.story_system_prompt,
-            thinking=thinking,
+            thinking_effort=thinking_effort,
             toolbox=self.tb,
             callback_handler=WebCallbackHandler(socket)
         )
     
-    def saveHistory(self):
-        self.provider.saveHistory(self.story_history_path)
-    def loadHistory(self) -> list[dict] | None:
-        return self.provider.loadHistory(self.story_history_path)
+    def saveMessages(self):
+        self.provider.saveMessages(self.story_history_path)
+    def loadMessages(self) -> list[dict] | None:
+        return self.provider.loadMessages(self.story_history_path)
+    @staticmethod
+    def initFromHistory(story_name: str, socket: SocketIO) -> "Narrator":
+        history_path = f"./stories/{story_name}/history.json"
+        if os.path.exists(history_path):
+            with open(history_path) as f:
+                history_data = json.load(f)
+                model_name = history_data.get("model_name")
+                return Narrator(model_name, socket, "high", story_name)
+        return None
 
     def loadStory(self):
-        history = self.loadHistory()
+        history = self.loadMessages()
         if history is not None:
             converted_history = self.provider.messages
             self.socket.emit('conversation_history', converted_history)
         else:
             self.provider.addUserMessage("<|begin_conversation|>")
             self.provider.run()
-            self.saveHistory()
+            self.saveMessages()
         self.socket.emit('assistant_ready')
         self.socket.emit('turn_end')
      
@@ -54,4 +63,4 @@ class Narrator:
         self.provider.addUserMessage(data['message'])
         self.provider.run()
         self.socket.emit('turn_end')
-        self.saveHistory()
+        self.saveMessages()

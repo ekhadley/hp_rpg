@@ -1,5 +1,8 @@
+from codecs import utf_8_decode
 import json
 import requests
+import copy
+import os
 
 from utils import *
 import model_tools
@@ -7,37 +10,34 @@ from model_tools import Toolbox
 import callbacks
 from callbacks import CallbackHandler
 
-
-
 class OpenRouterStream:
     """
-    Streams responses from OpenRouter. Iteration over the object yields only valid json. Uses the alpha 'Responses' endpoint.
+    Streams responses from OpenRouter. Iteration over the object yields only valid json.
     """
     def __init__(
         self,
         model_name: str,
         messages: list[dict],
-        system_prompt: str,
         tools: list[dict],
         thinking_enabled: bool,
         thinking_effort: str,
         key: str
     ):
         self.response_stream = requests.post(
-            url = "https://openrouter.ai/api/alpha/responses",
+            url = "https://openrouter.ai/api/v1/chat/completions",
             headers = {
                 "Authorization": f"Bearer {key}",
                 "Content-Type": "application/json"
             },
             json = {
                 "model": model_name,
-                "input": messages,
-                "system": system_prompt,
+                "messages": messages,
+                #"system": system_prompt,
                 "tools": tools,
                 "reasoning": {
-                    #"enabled": thinking_enabled,
-                    #"effort": thinking_effort if thinking_enabled else None,
-                    #"exclude": False,
+                    "enabled": thinking_enabled,
+                    "effort": thinking_effort if thinking_enabled else None,
+                    "exclude": False,
                 },
                 "stream": True
             },
@@ -45,50 +45,100 @@ class OpenRouterStream:
         )
         if self.response_stream.status_code != 200:
             error_msg = self.response_stream.text.replace("\\n ", "\n ").replace("\\\"", "\"")
-            with open("error.json", "w+") as f: f.write(error_msg)
-            assert self.response_stream.status_code == 200, f"Error response from OpenRouter: {self.response_stream.status_code}"
-        self.response_iter = self.response_stream.iter_content(chunk_size=1024, decode_unicode=True)
+            assert self.response_stream.status_code == 200, f"Error response from OpenRouter: {error_msg}"
+        self.response_iter = self.response_stream.iter_content(chunk_size=1024, decode_unicode=False)
         
         self.content_stream_finished = False
         self.buffer = ""
-        self.decode_error_count = 0
+        self.decode_retry_count = 0
+        self.decode_retry_limit = 1000
 
     def __iter__(self):
         return self
 
     def __next__(self) -> dict:
         while True:
-            #print(len(self.buffer), repr(self.buffer[:min(100, len(self.buffer))]))
-            #print(len(self.buffer), repr(self.buffer))
-            if not self.content_stream_finished:
+            # Ensure we have at least one complete SSE event in the buffer
+            def find_event_delimiter(buf: str) -> tuple[int, int]:
+                idx_lf = buf.find("\n\n")
+                idx_crlf = buf.find("\r\n\r\n")
+                if idx_lf == -1 and idx_crlf == -1:
+                    return -1, 0
+                if idx_lf == -1:
+                    return idx_crlf, 4
+                if idx_crlf == -1:
+                    return idx_lf, 2
+                # choose earliest occurrence
+                return (idx_lf, 2) if idx_lf < idx_crlf else (idx_crlf, 4)
+
+            while True:
+                idx, sep_len = find_event_delimiter(self.buffer)
+                if idx != -1:
+                    break
+                if self.content_stream_finished:
+                    break
                 try:
-                    next_chunk = self.response_iter.__next__()
+                    next_chunk = utf_8_decode(self.response_iter.__next__())[0]
                     self.buffer += next_chunk
                 except StopIteration:
                     self.content_stream_finished = True
-            elif self.buffer == "" or self.buffer.strip() == "data: [DONE]":
+                    break
+
+            # If stream is finished and buffer is empty or only contains DONE, stop.
+            if self.content_stream_finished and (self.buffer.strip() == "" or self.buffer.strip() == "data: [DONE]"):
                 raise StopIteration
-            
-            delta_end = self.buffer.find("\n\n")
-            delta_str = self.buffer[:delta_end]
-            while delta_str.startswith(": "):
-                delta_end = self.buffer.find("\n\n")
-                delta_str = self.buffer[:delta_end]
-                self.buffer = self.buffer[delta_end+2:]
+
+            # Extract one SSE event (or whatever remains if no delimiter found at end)
+            if idx != -1:
+                event_chunk = self.buffer[:idx]
+                self.buffer = self.buffer[idx + sep_len:]
+            else:
+                event_chunk = self.buffer
+                self.buffer = ""
+
+            if event_chunk.strip() == "":
+                # Nothing meaningful in this chunk; continue reading
+                continue
+
+            # Parse SSE fields; concatenate multi-line data fields, ignore comments/other fields
+            data_lines: list[str] = []
+            for raw_line in event_chunk.splitlines():
+                line = raw_line.rstrip("\r")
+                if not line:
+                    continue
+                if line.startswith(":"):
+                    # SSE comment/keepalive
+                    continue
+                if line.startswith("data:"):
+                    data_lines.append(line[5:].lstrip())
+                # Ignore other fields like id:, event:, retry:
+
+            if not data_lines:
+                # No data lines in this event; continue
+                continue
+
+            data_payload = "\n".join(data_lines).strip()
+
+            if data_payload == "[DONE]":
+                # Mark finished; only stop if buffer drained
+                self.content_stream_finished = True
+                if self.buffer.strip() == "":
+                    raise StopIteration
+                continue
 
             try:
-                delta_clipped = delta_str.lstrip("data: ")
-                delta = json.loads(delta_clipped)
-                self.buffer = self.buffer[delta_end+2:]
-                return delta
+                parsed = json.loads(data_payload)
+                self.decode_retry_count = 0
+                return parsed
             except json.JSONDecodeError as e:
-                self.decode_error_count += 1
-                if self.decode_error_count > 300:
+                self.decode_retry_count += 1
+                if self.decode_retry_count > self.decode_retry_limit or self.content_stream_finished:
                     if debug():
-                        print(f"{bold+red}({self.decode_error_count}) [{self.content_stream_finished}] Error decoding delta: {repr(delta_clipped)} {endc}")
+                        print(f"{bold+red}({self.decode_retry_count}) [{self.content_stream_finished}] Error decoding data payload: {repr(data_payload)} {endc}")
                         print(f"{bold+orange}{repr(self.buffer)} {endc}")
                     raise e
-                pass
+                # On transient decode issues, keep accumulating more data
+                continue
     
     def close(self):
         self.response_stream.close()
@@ -116,24 +166,22 @@ class OpenRouterProvider():
         self.thinking_enabled = thinking_effort != "none"
         self.thinking_effort = thinking_effort
         
+        self.addSystemMessage(system_prompt)
 
+    def addSystemMessage(self, content: str) -> None:
+        self.messages.insert(0, {
+            "role": "system",
+            "content": content,
+        })
     def addUserMessage(self, content: str) -> None:
         self.messages.append({
-            "type": "message",
             "role": "user",
-            "content": [{
-                "type": "input_text",
-                "text": content,
-            }],
+            "content": content,
         })
     def addAssistantMessage(self, content) -> None:
         self.messages.append({
-            "type": "message",
             "role": "assistant",
-            "content": [{
-                "type": "output_text",
-                "text": content,
-            }],
+            "content": content,
         })
     def saveMessages(self, path: str) -> None:
         with open(path, "w+") as f:
@@ -157,7 +205,6 @@ class OpenRouterProvider():
         return OpenRouterStream(
             model_name = self.model_name,
             messages = self.messages,
-            system_prompt = self.system_prompt,
             tools = self.tool_schemas,
             thinking_enabled = self.thinking_enabled,
             thinking_effort = self.thinking_effort,
@@ -166,115 +213,85 @@ class OpenRouterProvider():
 
     def run(self) -> None:
         currently_outputting_text = False
-        currently_thinking = False
-        currently_calling_tools = False
-        current_reasoning_summary = None
         stream = self.getStream()
-        if debug(): print(orange, json.dumps(self.messages, indent=4), endc)
+        #print(orange, json.dumps(self.messages, indent=4), endc)
         for event in stream:
-            if debug(): print(gray, json.dumps(event, indent=4), endc)
-            event_type = event["type"]
-            print(gray, event_type, endc)
+            #print(gray if not "tool_calls" in str(event) else red, json.dumps(event, indent=4), endc)
+            event_item = event["choices"][0]
+            delta = event_item["delta"]
+            if self.messages[-1]["role"] != "assistant":
+                self.messages.append(copy.deepcopy(delta))
+                if "tool_calls" in delta: self.messages[-1]["tool_calls"] = [] # only initialize a tool calls array if it's in the delta. gets repopulated later.
+                self.messages[-1]["reasoning"] = ""
+                self.messages[-1]["reasoning_details"] = [{}]
 
-            if event_type == "response.output_text.delta":
-                delta_content = event["delta"]
-                if delta_content != "":
-                    if debug() and not currently_outputting_text:
-                        print(yellow, "Assistant started producing text. . .", endc)
-                        currently_outputting_text = True
-                    self.cb.text_output(text=delta_content)
+            delta_content = delta.get("content", None)
+            if delta_content is not None and delta_content != "":
+                if delta_content != "": self.messages[-1]["content"] += delta_content
+                if not currently_outputting_text:
+                    if debug(): print(yellow, "Assistant producing text. . .", endc)
+                    currently_outputting_text = True
+                self.cb.text_output(text=delta_content)
+            
+            reasoning_delta = delta.get("reasoning", None)
+            if reasoning_delta is not None and reasoning_delta != "":
+                self.messages[-1]["reasoning"] += reasoning_delta
+                self.cb.think_output(text=reasoning_delta)
+            
+            reasoning_details = delta.get("reasoning_details", [{}])
+            if reasoning_details != [{}] and reasoning_details != []:
+                self.messages[-1]["reasoning_details"] = reasoning_details
+                self.messages[-1]["reasoning_details"][0]["text"] = self.messages[-1]["reasoning"]
 
-            elif event_type == "response.reasoning_summary_text.delta":
-                if debug() and not currently_thinking:
-                    print(cyan, "Assistant thinking...", endc)
-                    currently_thinking = True
-                self.cb.think_output(text=event["delta"])
-
-            elif event_type == "response.output_item.added":
-                event_item = event["item"]
-                event_item_type = event_item["type"]
-                print(pink, event_item_type, endc)
-                if event_item_type == "function_call":
-                    tool_name = event_item["name"]
-                    if not currently_calling_tools:
-                        currently_calling_tools = True
-                        self.cb.tool_request(name=tool_name, inputs={})
-                        if debug(): print(cyan, f"tool call started: {tool_name}", endc)
-
-                elif event_item_type == "reasoning":
-                    if debug(): print(cyan, "Assistant is thinking...", endc)
-
-                elif event_item_type == "summary_text":
-                    currently_thinking = False
-                    self.cb.think_end()
-                    current_reasoning_summary = event_item["summary"]
-                    if debug(): print(cyan, f"Assistant reasoning summary: {event_item["text"]}", endc)
-
-                elif event_item_type == "reasoning":
-                    currently_thinking = False
-                    self.cb.think_end()
-                    if current_reasoning_summary is not None: event_item["summary"] = current_reasoning_summary
-                    current_reasoning_summary = None
-                    self.messages.append(event_item)
-
-            elif event_type == "response.completed":
-                response = event["response"]
-                response_output = response["output"]
-
-                for item in response_output:
-                    item_type = item["type"]
-                    print(purple, item_type, endc)
-                    if item_type == "function_call":
-                        tool_name, tool_call_id, tool_arguments  = item["name"], item["call_id"], item["arguments"]
-                        print(cyan, f"tool call arguments: {repr(tool_arguments)}", endc)
-                        result = self.tb.getToolResult(tool_name, tool_arguments)
-                        if debug(): print(pink, f"tool call completed: {tool_name}({truncateForDebug(tool_arguments)}) with result: {truncateForDebug(result)}", endc)
-                        
-                        self.submitToolCall(tool_name, tool_arguments, tool_call_id)
-                        self.cb.tool_submit(names=[tool_name], inputs=[tool_arguments], results=[result])
-                        self.submitToolOutput(tool_call_id, result)
-
-                    elif item_type == "message" and not currently_calling_tools:
-                        self.messages.append(item)
-                    
-                    elif item_type == "reasoning":
-                        print(item)
-                        self.messages.append(item)
-
-                stream.close()
-                if currently_calling_tools:
-                    self.run()
-                if debug(): print(orange, json.dumps(self.messages, indent=4), endc)
+            tool_calls = delta.get("tool_calls", [])
+            assert len(tool_calls) < 2, f"Tool calls: {tool_calls}"
+            for tool_call in tool_calls:
+                if "id" in tool_call: # only the first delta has the id/name. subsequent deltas are for arguments only
+                    if "tool_calls" not in self.messages[-1]: self.messages[-1]["tool_calls"] = []
+                    self.messages[-1]["tool_calls"].append(tool_call)
+                    tool_name = tool_call["function"]["name"]
+                    self.cb.tool_request(name=tool_name, inputs={})
+                    if debug(): print(pink, f"Tool call started: {tool_name}()", endc)
+                self.messages[-1]["tool_calls"][-1]["function"]["arguments"] += tool_call["function"]["arguments"]
+            
+            finish_reason = event_item.get("finish_reason", "")
+            if finish_reason == "stop":
+                currently_outputting_text = False
+                if debug(): print(yellow, "Assistant finished producing text.", endc)
                 return
-            elif debug():
-                if event_type == "response.failed":
-                    print(bold, red, f"ERROR: RUN FAILED:\n")
-                    print(event)
-                if currently_outputting_text:
-                    print(yellow, "Assistant finished producing text.", endc)
-                    currently_outputting_text = False
-        if debug(): print(orange, json.dumps(self.messages, indent=4), endc)
+            
+            if finish_reason == "tool_calls":
+                for tool_call in self.messages[-1]["tool_calls"]:
+                    tool_name, tool_arguments, call_id = tool_call["function"]["name"], tool_call["function"]["arguments"], tool_call["id"]
+                    tool_result = self.tb.getToolResult(tool_name, tool_arguments)
+                    self.submitToolOutput(call_id, tool_result)
+                    
+                    if debug(): print(pink, f"Tool call finished: {tool_name}({truncateForDebug(tool_arguments)})", endc)
+                    self.cb.tool_submit(names=[tool_name], inputs=[tool_arguments], results=[tool_result])
+
+                #print(orange, json.dumps(self.messages, indent=4), endc)
+                self.run()
+                return
+
+        #print(orange, json.dumps(self.messages, indent=4), endc)
         stream.close()
         self.cb.turn_end()
 
     def submitToolCall(self, tool_name: str, tool_arguments: dict, tool_call_id: str) -> None:
         self.messages.append({
-            "type": "function_call",
-            "id": tool_call_id,
-            "call_id": tool_call_id,
-            "name": tool_name,
+            "role": "tool",
+            "tool_call_id": tool_call_id,
             "arguments": tool_arguments,
         })
     def submitToolOutput(self, call_id: str, tool_output: dict) -> None:
         self.messages.append({
-            "type": "function_call_output",
-            "id": call_id,
-            "call_id": call_id,
-            "output": str(tool_output)
+            "role": "tool",
+            "tool_call_id": call_id,
+            "content": tool_output,
         })
     
 
-if __name__ == "_main__":
+if __name__ == "__main__":
     basic_tb = Toolbox([ # demo
         model_tools.list_directory_tool_handler,
         model_tools.read_file_tool_handler,
@@ -282,57 +299,24 @@ if __name__ == "_main__":
     ])
 
     asst = OpenRouterProvider(
-        model_name = "openai/o4-mini",
-        #model_name = "openai/gpt-4o-mini",
+        #model_name = "openai/o4-mini",
+        model_name = "openai/gpt-4o-mini",
         #model_name = "anthropic/claude-3-haiku",
+        #model_name = "anthropic/claude-3.5-haiku",
         #model_name = "anthropic/claude-sonnet-4",
-        system_prompt = "You are a helpful assistant that can use tools.",
-        thinking_effort = "low",
+        system_prompt = "You are a helpful assistant that can use tools and talks like a pirate.",
+        thinking_effort = "high",
         toolbox = basic_tb,
         callback_handler = callbacks.TerminalPrinter(),
     )
 
-    #asst.addUserMessage("Hello assistant. Can you generate a random number from 1-10 and add to it the number of files in the current directory? Use your reasoning.")
-    #asst.addUserMessage("Hello assistant. Can you generate 2 random numbers from 1-10 and add them together?")
-    asst.addUserMessage("Hello assistant. What is the surface area of Mars in hectares?")
+    #asst.addUserMessage("Hello assistant. Can you generate a random number from 1-10 and add to it the number of files in the current directory?")
     #asst.addUserMessage("Hello assistant. Can you generate a random number from 1-10?")
-    #asst.addUserMessage("Hello assistant. How many files are in the current directory?")
+    #asst.addUserMessage("Hello assistant. Can you generate a random numbers from 1-10 and add it to a random number from 1-20?")
+    #asst.addUserMessage("Hello assistant. What is the surface area of Mars in hectares?")
+    asst.addUserMessage("Hello assistant. How many files are in the current directory?")
     #asst.addUserMessage("Hello assistant. How are you?")
     asst.run()
-    
-    asst.addUserMessage("Can you multiply the number by 2?")
-    asst.run()
 
-
-if __name__ == "__main__":
-    response_stream = requests.post(
-        url = "https://openrouter.ai/api/alpha/responses",
-        headers = {
-            "Authorization": f"Bearer {os.getenv('OPENROUTER_API_KEY')}",
-            "Content-Type": "application/json"
-        },
-        json = {
-            "model": "openai/o4-mini",
-            "input": [
-                {
-                    "type": "message",
-                    "role": "user",
-                    "content": "Hello assistant. Can you generate a random number from 1-10?"
-                }
-            ],
-            "system": "You are a helpful assistant that can use tools.",
-            "reasoning": {
-                #"enabled": thinking_enabled,
-                "effort": "high",
-                #"exclude": False,
-            },
-            "stream": True
-        },
-        stream = True
-    )
-    response_iter = response_stream.iter_content(chunk_size=1024, decode_unicode=True)
-
-    for chunk in response_iter:
-        print()
-        print()
-        print(chunk)
+    #asst.addUserMessage("Give me 1 fun fact about sheep.")
+    #asst.run()
