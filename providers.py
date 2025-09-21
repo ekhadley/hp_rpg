@@ -56,6 +56,8 @@ class Provider:
     def makeToolDefinitions(self) -> list[dict]:
         pass
 
+
+
 class OpenAIProvider(Provider):
     def __init__(
             self,
@@ -64,7 +66,7 @@ class OpenAIProvider(Provider):
             system_prompt: str,
             callback_handler: CallbackHandler,
             thinking: bool,
-            thinking_effort: str = "low",
+            thinking_effort: str = "high",
             thinking_summary: str = "detailed"
         ):
         self.model_name = model_name
@@ -359,32 +361,6 @@ class AnthropicProvider(Provider):
         print(json.dumps(converted, indent=4))
         return converted
 
-model_providers = {
-    "o3-mini": OpenAIProvider,
-    "o3": OpenAIProvider,
-    "gpt-4.1": OpenAIProvider,
-    "gpt-4.5": OpenAIProvider,
-    "gpt-4o": OpenAIProvider,
-    "gpt-4o-mini": OpenAIProvider,
-    "gpt-5": OpenAIProvider,
-    "claude-opus-4-20250514": AnthropicProvider,
-    "claude-sonnet-4-20250514": AnthropicProvider,
-    "claude-3-7-sonnet-latest": AnthropicProvider,
-    "claude-3-5-haiku-latest": AnthropicProvider,
-}
-def model_supports_thinking(model_name: str) -> bool:
-    if model_name.startswith("o3") or model_name.startswith("gpt-5"):
-        return True
-    anthropic_supported = ["opus","sonnet"]
-    if any(token in model_name for token in anthropic_supported):
-        return True
-    return False
-
-def getModelProvider(model_name: str) -> Provider:
-    if model_name in model_providers:
-        return model_providers[model_name]
-    else:
-        raise ValueError(f"Model provider for '{model_name}' not found. Recognized models: {list(model_providers.keys())}")
 
 if __name__ == "__main__":
     basic_tb = Toolbox([ # demo
@@ -397,10 +373,10 @@ if __name__ == "__main__":
     model_name = "claude-sonnet-4-20250514"
     #model_name = "o3-mini",
     #model_name = "gpt-4o-mini",
-    asst = getModelProvider(model_name)(
+    asst = OpenAIProvider(
         model_name = model_name,
         system_prompt = "You are a helpful assistant that can use tools.",
-        thinking = True,
+        thinking = False,
         toolbox = basic_tb,
         callback_handler = callbacks.TerminalPrinter(),
     )
@@ -413,4 +389,3 @@ if __name__ == "__main__":
     #asst.saveHistory("./oai_history.json")
 
     #asst.loadHistory("./ant_history.json")
-    #asst.emitHistory()

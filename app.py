@@ -2,9 +2,8 @@ import os
 import json
 from flask_socketio import SocketIO, emit
 from flask import Flask, render_template
-from providers import model_providers
-from utils import *
 from narrator import Narrator
+from utils import *
  
 
 app = Flask(__name__, template_folder="frontend/templates", static_folder="frontend/static")
@@ -58,6 +57,7 @@ def create_story(data):
 
 @app.route('/')
 def index():
+    model_providers = ["anthropic/claude-3.5-haiku", "openai/o3-mini", "gpt-5"]
     return render_template('index.html', stories=listStoryNames(), models=list(model_providers.keys()))
 
 if __name__ == "__main__":

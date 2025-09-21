@@ -29,13 +29,10 @@ def parse_handler_metadata(func):
             type_str = type_str.strip(") ").lower()
         except ValueError:
             raise ValueError(f"Invalid argument docstring line: '{line}'")
-
         arg_properties[name] = {
             "type": type_str,
             "description": param_desc.strip()
         }
-
-    #return type("HandlerProperties", (), {"name": tool_name, "description": description, "arg_properties": arg_properties, "handler": func})()
     return {"name": tool_name, "description": description, "arg_properties": arg_properties, "handler": func}
 
 
@@ -46,24 +43,15 @@ class Tool:
         self.description = handler_props['description']
         self.handler = handler
         self.arg_properties = handler_props['arg_properties']
-        self._openai_schema = {
+        self.schema = {
             "type": "function",
             "name": self.name,
             "description": self.description,
             "parameters": {
                 "type": "object",
                 "properties": self.arg_properties,
+                "required": [key for key in self.arg_properties.keys()],
             },
-            "required": [key for key in self.arg_properties.keys()]
-        }
-        self._anthropic_schema = {
-            "name": self.name,
-            "description": self.description,
-            "input_schema": {
-                "type": "object",
-                "properties": self.arg_properties,
-                "required": [key for key in self.arg_properties.keys()]
-            }
         }
         self.kwargs = default_kwargs
 
@@ -85,6 +73,8 @@ class Toolbox:
         self.tool_map = {tool.name: tool for tool in self.tools}
     
     def getToolResult(self, tool_name: str, parameters: dict) -> str:
+        if isinstance(parameters, str):
+            parameters = json.loads(parameters) if parameters != "" else {}
         if tool_name in self.tool_map:
             return self.tool_map[tool_name].getResult(parameters)
         else:
@@ -95,6 +85,9 @@ class Toolbox:
         self.kwargs = kwargs
         for tool in self.tools:
             tool.kwargs = kwargs
+        
+    def getToolSchemas(self) -> list[dict]:
+        return [tool.schema for tool in self.tools]
 
 # Tool handlers
 # descriptions and argument properties are parsed automatically from the docstring.
@@ -129,6 +122,7 @@ def list_story_files_tool_handler(**kwargs) -> list[str]:
     """list_files: Lists all files in the current story directory.
     """
     files = [f for f in os.listdir(f"./stories/{kwargs['current_story']}") if ".md" in f]
+    files = [f.replace("'", "") for f in files]
     return files
 
 def read_story_file_tool_handler(file_name: str, **kwargs) -> str:

@@ -1,11 +1,10 @@
 import os
 import json
 
-
 from utils import getFullStoryInstruction, debug, yellow, endc
 import model_tools
 from callbacks import WebCallbackHandler
-from providers import Provider, getModelProvider, model_supports_thinking
+from openrouter import OpenRouterProvider
 from flask_socketio import SocketIO, emit
 
 
@@ -25,14 +24,8 @@ class Narrator:
         self.story_system_prompt = getFullStoryInstruction(story_name)
         self.story_history_path = f"./stories/{story_name}/history.json"
         self.socket = socket
-        self.provider_class = getModelProvider(model_name)
 
-        if thinking and not model_supports_thinking(model_name):
-            if debug():
-                print(yellow, f"Thinking was enabled but model '{model_name}' does not support it.", endc)
-            thinking = False
-
-        self.provider: Provider = self.provider_class(
+        self.provider = OpenRouterProvider(
             model_name=model_name,
             system_prompt=self.story_system_prompt,
             thinking=thinking,
@@ -48,7 +41,7 @@ class Narrator:
     def loadStory(self):
         history = self.loadHistory()
         if history is not None:
-            converted_history = self.provider.emitHistory()
+            converted_history = self.provider.messages
             self.socket.emit('conversation_history', converted_history)
         else:
             self.provider.addUserMessage("<|begin_conversation|>")

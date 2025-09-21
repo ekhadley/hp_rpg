@@ -23,8 +23,8 @@ def debug() -> bool:
 def truncateForDebug(obj, max_length=200):
     obj_str = str(obj)
     if len(obj_str) <= max_length:
-        return obj_str
-    return obj_str[:max_length] + "..."
+        return repr(obj_str)
+    return repr(obj_str[:max_length] + "...")
 
 def listStoryNames() -> list[str]:
     return sorted(os.listdir("./stories"))
