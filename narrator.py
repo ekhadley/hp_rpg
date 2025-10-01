@@ -27,6 +27,8 @@ class Narrator:
         self.story_system_prompt = getFullStoryInstruction(system_name, story_name)
         self.story_history_path = f"./stories/{story_name}/history.json"
         self.socket = socket
+        self.model_name = model_name
+        self.system_name = system_name
 
         self.provider = OpenRouterProvider(
             model_name=model_name,
@@ -37,9 +39,11 @@ class Narrator:
         )
     
     def saveMessages(self):
-        self.provider.saveMessages(self.story_history_path)
+        self.provider.saveMessages(self.story_history_path, model_name=self.model_name, system_name=self.system_name)
+
     def loadMessages(self) -> list[dict[str, str]] | None:
         return self.provider.loadMessages(self.story_history_path)
+
     @staticmethod
     def initFromHistory(story_name: str, socket: SocketIO) -> "Narrator | None":
         history_path = f"./stories/{story_name}/history.json"
@@ -48,14 +52,13 @@ class Narrator:
                 history_data: dict[str, str] = json.load(f)
                 model_name = history_data["model_name"]
                 system_name = history_data["system_name"]
-                return Narrator(model_name, socket, "high", story_name, system_name)
-        return None
+                reasoning_effort = history_data.get("reasoning_effort", "high")
+                return Narrator(model_name, socket, reasoning_effort, story_name, system_name)
 
     def loadStory(self):
         history = self.loadMessages()
         if history is not None:
-            converted_history = self.provider.messages
-            self.socket.emit('conversation_history', converted_history)
+            self.socket.emit('conversation_history', self.provider.messages)
         else:
             self.provider.addUserMessage("<|begin_conversation|>")
             self.provider.run()

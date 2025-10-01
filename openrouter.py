@@ -156,9 +156,10 @@ class OpenRouterProvider():
             thinking_effort: str = "high",
             key: str|None = os.getenv("OPENROUTER_API_KEY"),
         ):
-        self.key = key
-        self.model_name = model_name
-        self.tb = toolbox
+        assert key is not None, "OPENROUTER_API_KEY is not set"
+        self.key: str = key
+        self.model_name: str = model_name
+        self.tb: Toolbox = toolbox
         self.tool_schemas = self.tb.getToolSchemas()
         self.system_prompt = system_prompt
         self.messages: list[dict] = []
@@ -183,10 +184,11 @@ class OpenRouterProvider():
             "role": "assistant",
             "content": content,
         })
-    def saveMessages(self, path: str) -> None:
+    def saveMessages(self, path: str, **kwargs) -> None:
         with open(path, "w+") as f:
             json.dump({
-                "model_name": self.model_name,
+                "model_name": kwargs.get("model_name", self.model_name),
+                "system_name": kwargs.get("system_name", ""),
                 "messages": self.messages,
             }, f, indent=4)
     def loadMessages(self, path: str) -> list[dict] | None:
@@ -283,7 +285,7 @@ class OpenRouterProvider():
             "tool_call_id": tool_call_id,
             "arguments": tool_arguments,
         })
-    def submitToolOutput(self, call_id: str, tool_output: dict) -> None:
+    def submitToolOutput(self, call_id: str, tool_output: str) -> None:
         self.messages.append({
             "role": "tool",
             "tool_call_id": call_id,

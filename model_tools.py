@@ -6,7 +6,7 @@ from collections.abc import Callable
 
 from utils import *
 
-def parse_handler_metadata(func):
+def parse_handler_metadata(func: Callable) -> dict:
     doc = inspect.getdoc(func)
     if not doc:
         raise ValueError("Tool handlers must have a docstring.")
@@ -37,7 +37,7 @@ def parse_handler_metadata(func):
 
 
 class Tool:
-    def __init__(self, handler: Callable, default_kwargs: dict = {}):
+    def __init__(self, handler: Callable, default_kwargs: None|dict = None):
         handler_props = parse_handler_metadata(handler)
         self.name = handler_props['name']
         self.description = handler_props['description']
@@ -55,7 +55,7 @@ class Tool:
                 },
             }
         }
-        self.kwargs = default_kwargs
+        self.kwargs = default_kwargs if default_kwargs is not None else {}
 
     def getResult(self, parameters: dict) -> str:
         try:
@@ -88,7 +88,7 @@ class Toolbox:
         for tool in self.tools:
             tool.kwargs = kwargs
         
-    def getToolSchemas(self) -> list[dict]:
+    def getToolSchemas(self) -> list[dict[str, str]]:
         return [tool.schema for tool in self.tools]
 
 # Tool handlers

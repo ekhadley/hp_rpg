@@ -9,6 +9,7 @@ app = Flask(__name__, template_folder="frontend/templates", static_folder="front
 app.secret_key = os.urandom(24)
 socket = SocketIO(app, cors_allowed_origins="*")
 
+global narrator
 narrator = None
 models = [
     "openai/gpt-5",
@@ -32,10 +33,9 @@ def select_story(data: dict[str, str]):
 
     # Determine model to use for this story
     model_name = requested_model if requested_model else models[0]
-    if storyHistoryExists(story_name):
-        narrator = Narrator.initFromHistory(story_name, socket)
-    else:
-        narrator: Narrator = Narrator(
+    narrator: Narrator | None = Narrator.initFromHistory(story_name, socket)
+    if narrator is None:
+        narrator = Narrator(
             model_name = model_name,
             system_name = system_name,
             story_name = story_name,
