@@ -123,7 +123,7 @@ def read_file_tool_handler(file_name: str, **kwargs) -> str:
 def list_story_files_tool_handler(**kwargs) -> list[str]:
     """list_files: Lists all files in the current story directory.
     """
-    files = [f for f in os.listdir(f"./stories/{kwargs['current_story']}") if ".md" in f]
+    files = [f for f in os.listdir(f"./stories/{kwargs['story_name']}") if ".md" in f]
     files = [f.replace("'", "") for f in files]
     return files
 
@@ -131,7 +131,7 @@ def read_story_file_tool_handler(file_name: str, **kwargs) -> str:
     """read_file: Read the contents of a file in the current story directory.
     file_name (string): Name of the file to be read. Should include the file extension, and not include any parent folders or subfolders.
     """
-    with open(f"./stories/{kwargs['current_story']}/{file_name}", 'r') as file:
+    with open(f"./stories/{kwargs['story_name']}/{file_name}", 'r') as file:
         content = file.read()
     return content
 
@@ -142,8 +142,8 @@ def write_story_file_tool_handler(file_name: str, contents: str, **kwargs) -> st
     """
     if not file_name.endswith(".md"):
         file_name += ".md"
-    exists = os.path.exists(f"./stories/{kwargs['current_story']}/{file_name}")
-    with open(f"./stories/{kwargs['current_story']}/{file_name}", 'w') as file:
+    exists = os.path.exists(f"./stories/{kwargs['story_name']}/{file_name}")
+    with open(f"./stories/{kwargs['story_name']}/{file_name}", 'w') as file:
         file.write(contents)
     if exists: return "File edited successfully."
     else: return "File saved successfully."
@@ -155,8 +155,8 @@ def append_story_file_tool_handler(file_name: str, contents: str, **kwargs) -> s
     """
     if not file_name.endswith(".md"):
         file_name += ".md"
-    exists = os.path.exists(f"./stories/{kwargs['current_story']}/{file_name}")
-    with open(f"./stories/{kwargs['current_story']}/{file_name}", 'a') as file:
+    exists = os.path.exists(f"./stories/{kwargs['story_name']}/{file_name}")
+    with open(f"./stories/{kwargs['story_name']}/{file_name}", 'a') as file:
         file.write("\n" + contents)
     if exists: return "Contents appended to file successfully."
     else: return "File created and contents added successfully."
@@ -165,21 +165,21 @@ def _summarize_story_tool_handler(contents: str, **kwargs) -> str:
     """summarize_story: This will overwrite the contents of the story_summary.md file with the contents provided. 
     contents (string): The contents to write to the story summary file. Do not include backticks around the contents to be saved.
     """
-    with open(f"./stories/{kwargs['current_story']}/story_summary.md", 'w') as file:
+    with open(f"./stories/{kwargs['story_name']}/story_summary.md", 'w') as file:
         file.write(contents)
     return "Story summary saved successfully."
 
 def read_story_summary_tool_handler(**kwargs) -> str:
     """read_story_summary: Read the story summary file (story_summary.md) in the current story directory.
     """
-    with open(f"./stories/{kwargs['current_story']}/story_summary.md", 'r') as file:
+    with open(f"./stories/{kwargs['story_name']}/story_summary.md", 'r') as file:
         content = file.read()
     return content
 
 def read_story_plan_tool_handler(**kwargs) -> str:
     """read_story_plan: Read the story plan file, laying out the behind-the-scenes architecture of the current story.
     """
-    with open(f"./stories/{kwargs['current_story']}/story_plan.md", 'r') as file:
+    with open(f"./stories/{kwargs['story_name']}/story_plan.md", 'r') as file:
         content = file.read()
     return content
 

@@ -15,6 +15,7 @@ models = [
     "openai/o4",
     "openai/gpt-4o-mini",
     "anthropic/claude-opus-4.1",
+    "anthropic/claude-sonnet-4.5",
     "anthropic/claude-sonnet-4",
     "anthropic/claude-3.5-haiku",
     "google/gemini-2.5-pro",
@@ -22,11 +23,11 @@ models = [
 ]
 
 @socket.on('select_story')
-def select_story(data):
-    global narrator
+def select_story(data: dict[str, str]):
 
     if debug(): print(cyan, f"selected story: '{data['selected_story']}'", endc)
     story_name = data['selected_story']
+    system_name = data.get('system_name', "hp")
     requested_model = data.get('model_name', None)
 
     # Determine model to use for this story
@@ -34,11 +35,12 @@ def select_story(data):
     if storyHistoryExists(story_name):
         narrator = Narrator.initFromHistory(story_name, socket)
     else:
-        narrator = Narrator(
+        narrator: Narrator = Narrator(
             model_name = model_name,
+            system_name = system_name,
+            story_name = story_name,
             socket = socket,
             thinking_effort = "high",
-            story_name = story_name
         )
     if debug(): print(cyan, f"narrator initialized for story: '{story_name}'", endc)
     narrator.loadStory()
@@ -46,12 +48,12 @@ def select_story(data):
 
 
 @socket.on('user_message')
-def handle_user_message(data):
+def handle_user_message(data: dict[str, str]):
     global narrator
     narrator.handleUserMessage(data)
 
 @socket.on('create_story')
-def create_story(data):
+def create_story(data: dict[str, str]):
     new_story_name = data['story_name'].strip()
     if new_story_name:
         makeNewStoryDir(new_story_name)

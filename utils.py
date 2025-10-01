@@ -17,10 +17,13 @@ bold = '\033[1m'
 underline = '\033[4m'
 endc = '\033[0m'
 
+STORIES_ROOT_DIR = "stories"
+SYSTEM_PROMPTS_ROOT_DIR = "instructions"
+
 def debug() -> bool:
     return os.environ.get("DEBUG", "0").lower() == "1"
 
-def truncateForDebug(obj, max_length=200):
+def truncateForDebug(obj: object, max_length: int=200):
     obj_str = str(obj)
     if len(obj_str) <= max_length:
         return repr(obj_str)
@@ -32,36 +35,26 @@ def listStoryNames() -> list[str]:
 def makeNewStoryDir(story_name: str):
     os.mkdir(f"./stories/{story_name}")
 
-def getFullInstructionMessage() -> str:
-    with open("instructions/instructions.md", 'r') as file:
-        content = file.read()
-    return content
-
 def storyHistoryExists(story_name: str) -> bool:
     return os.path.exists(f"./stories/{story_name}/history.json")
 
-def getFullStoryInstruction(story_name: str) -> str: # fetches the base instructions, as well as any of pc.md, story_plan.md, story_summary.md, if they exist.
-    base_instructions = getFullInstructionMessage()
+def getAllSystemInstructions(system_name: str) -> dict[str, str]:
+    instructions: dict[str, str] = {}
+    for file in os.listdir(f"{SYSTEM_PROMPTS_ROOT_DIR}/{system_name}"):
+        with open(f"{SYSTEM_PROMPTS_ROOT_DIR}/{system_name}/{file}", 'r') as file:
+            content = file.read()
+            instructions[str(file)] = str(content)
+    return instructions
+
+def getFullStoryInstruction(system_name: str, story_name: str) -> str: # fetches the base instructions, as well as any of pc.md, story_plan.md, story_summary.md, if they exist.
+    sys_instructions = getAllSystemInstructions(system_name)["instructions.md"]
     story_files = ["pc.md", "story_plan.md", "story_summary.md"]
     story_instructions = ""
     for file_name in story_files:
         try:
-            with open(f"./stories/{story_name}/{file_name}", 'r') as file:
+            with open(f"{STORIES_ROOT_DIR}/{story_name}/{file_name}", 'r') as file:
                 content = file.read()
                 story_instructions += f"\n---\n{content}"
         except FileNotFoundError:
             continue
-    return base_instructions + story_instructions
-
-def selectStory() -> str:
-    print("Welcome to the game. Please select a story to play:")
-    stories = listStoryNames()
-    print(f"\t0. Create a new story.")
-    for i, story in zip(range(1, len(stories)+1), stories):
-        print(f"\t{i}. {story}")
-    choice = int(input("Enter the number of the story you want to play: "))
-    if choice == 0:
-        story_name = input("Enter the name of the new story: ")
-        makeNewStoryDir(story_name)
-        return story_name
-    return stories[choice-1]
+    return sys_instructions + story_instructions

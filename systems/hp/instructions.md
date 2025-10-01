@@ -355,7 +355,7 @@ Nonverbal spellcasting involves performing magic without speaking the incantatio
 - A story cannot begin without a player character sheet, and a story plan. A story summary is necessary to resume a story.
 - If a player character sheet does not exist, offer to guide them through the character creation process step by step.
 - If a story plan does not exist, ask the user if there was a story they had in mind. If so, use their suggestions to create a story plan file. Don't create a plan without asking the user for direction first.
-- If any of the player character sheet, the story plan, or a story summary exist already, they will be shown to you now. If they are not shown they have not been made.
+- If `pc.md`, `story_plan.md`, or `story_summary.md` already exist in the story directory, they will be shown to you. If they are not shown, they do not exist yet.
 
 ---
 
