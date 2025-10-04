@@ -4,11 +4,13 @@ import requests
 import copy
 import os
 
-from utils import *
 import model_tools
 from model_tools import Toolbox
+
 import callbacks
 from callbacks import CallbackHandler
+
+#from utils import *
 
 class OpenRouterStream:
     """

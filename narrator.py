@@ -3,12 +3,18 @@ import json
 
 from utils import getFullStoryInstruction, debug, yellow, endc
 import model_tools
+from model_tools import Toolbox
 from callbacks import WebCallbackHandler
 from openrouter import OpenRouterProvider
 from flask_socketio import SocketIO, emit
 
+#list_story_files_tool_handler
+#write_story_file_tool_handler
+#append_story_file_tool_handler
+#read_story_file_tool_handler
+#roll_dice_tool_handler
 
-def makeStoryToolbox(story_name: str, system_name: str) -> model_tools.Toolbox:
+def defaultStoryToolbox(story_name: str, system_name: str) -> model_tools.Toolbox:
     return model_tools.Toolbox([
         model_tools.list_story_files_tool_handler,
         model_tools.write_story_file_tool_handler,
@@ -19,16 +25,15 @@ def makeStoryToolbox(story_name: str, system_name: str) -> model_tools.Toolbox:
         "story_name": story_name,
         "system_name": system_name,
     })
-
     
 class Narrator:
-    def __init__(self, model_name: str, socket: SocketIO, thinking_effort: str, story_name: str, system_name: str):
-        self.tb = makeStoryToolbox(story_name, system_name)
+    def __init__(self, model_name: str, tb: Toolbox, story_name: str, thinking_effort: str, socket: SocketIO):
+        self.tb: Toolbox = tb
         self.story_system_prompt = getFullStoryInstruction(system_name, story_name)
         self.story_history_path = f"./stories/{story_name}/history.json"
-        self.socket = socket
-        self.model_name = model_name
-        self.system_name = system_name
+        self.socket: SocketIO = socket
+        self.model_name: str = model_name
+        self.system_name: str = "none"
 
         self.provider = OpenRouterProvider(
             model_name=model_name,

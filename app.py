@@ -3,6 +3,8 @@ import json
 from flask_socketio import SocketIO, emit
 from flask import Flask, render_template
 from narrator import Narrator
+
+from utils import debug
 from utils import *
 
 app = Flask(__name__, template_folder="frontend/templates", static_folder="frontend/static")
@@ -25,11 +27,11 @@ models = [
 
 @socket.on('select_story')
 def select_story(data: dict[str, str]):
-
-    if debug(): print(cyan, f"selected story: '{data['selected_story']}'", endc)
+    if debug():
+        print(cyan, f"selected story: '{data['selected_story']}'", endc)
     story_name = data['selected_story']
     system_name = data.get('system_name', "hp")
-    requested_model = data.get('model_name', None)
+    requested_model = data['model_name']
 
     # Determine model to use for this story
     model_name = requested_model if requested_model else models[0]
