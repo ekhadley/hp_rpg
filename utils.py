@@ -1,4 +1,5 @@
 import os
+import json
 
 purple = '\x1b[38;2;255;0;255m'
 blue = '\x1b[38;2;0;0;255m'
@@ -18,7 +19,7 @@ underline = '\033[4m'
 endc = '\033[0m'
 
 STORIES_ROOT_DIR = "stories"
-SYSTEM_PROMPTS_ROOT_DIR = "instructions"
+GAME_SYSTEMS_ROOT_DIR = "systems"
 
 def debug() -> bool:
     return os.environ.get("DEBUG", "0").lower() == "1"
@@ -32,22 +33,41 @@ def truncateForDebug(obj: object, max_length: int=200):
 def listStoryNames() -> list[str]:
     return sorted(os.listdir("./stories"))
 
-def makeNewStoryDir(story_name: str):
-    os.mkdir(f"./stories/{story_name}")
+def listGameSystemNames() -> list[str]:
+    return sorted(os.listdir(f"{GAME_SYSTEMS_ROOT_DIR}"))
 
-def storyHistoryExists(story_name: str) -> bool:
+def makeNewStoryDir(story_name: str, system: str, model_name: str):
+    story_dir = f"./stories/{story_name}"
+    os.mkdir(story_dir)
+    with open(os.path.join(story_dir, "info.json"), "w") as f:
+        json.dump({
+            "system": system,
+            "model": model_name,
+            "story_name": story_name,
+        }, f, indent=4)
+
+def loadStoryInfo(story_name: str) -> dict[str, str]:
+    with open(os.path.join(f"./stories/{story_name}", "info.json"), "r") as f:
+        return json.load(f)
+
+def historyExists(story_name: str) -> bool:
     return os.path.exists(f"./stories/{story_name}/history.json")
 
-def getAllSystemInstructions(system_name: str) -> dict[str, str]:
+def getSystemInstructions(system_name: str, instructions_name: str = "instructions.md") -> str:
+    with open(f"{GAME_SYSTEMS_ROOT_DIR}/{system_name}/{instructions_name}", 'r') as file:
+        content = file.read()
+        return str(content)
+
+def _getAllSystemFiles(system_name: str) -> dict[str, str]:
     instructions: dict[str, str] = {}
-    for file in os.listdir(f"{SYSTEM_PROMPTS_ROOT_DIR}/{system_name}"):
-        with open(f"{SYSTEM_PROMPTS_ROOT_DIR}/{system_name}/{file}", 'r') as file:
+    for file in os.listdir(f"{GAME_SYSTEMS_ROOT_DIR}/{system_name}"):
+        with open(f"{GAME_SYSTEMS_ROOT_DIR}/{system_name}/{file}", 'r') as file:
             content = file.read()
             instructions[str(file)] = str(content)
     return instructions
 
-def getFullStoryInstruction(system_name: str, story_name: str) -> str: # fetches the base instructions, as well as any of pc.md, story_plan.md, story_summary.md, if they exist.
-    sys_instructions = getAllSystemInstructions(system_name)["instructions.md"]
+def _getFullStoryInstruction(system_name: str, story_name: str) -> str: # fetches the base instructions, as well as any of pc.md, story_plan.md, story_summary.md, if they exist.
+    sys_instructions = _getAllSystemFiles(system_name)["instructions.md"]
     story_files = ["pc.md", "story_plan.md", "story_summary.md"]
     story_instructions = ""
     for file_name in story_files:

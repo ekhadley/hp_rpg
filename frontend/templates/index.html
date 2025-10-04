@@ -31,13 +31,16 @@
         .chat-wrapper {
             box-shadow: none;
         }
-        /* Model select below title, invisible until hover */
+        /* Model and system selects below title, invisible until hover */
         .model-select-inline {
             width: 100%;
             padding: 6px 16px 0 16px; /* align with chat header padding */
             background: var(--discord-dark);
+            display: flex;
+            gap: 12px;
+            align-items: center;
         }
-        .model-select {
+        .model-select, .system-select {
             display: inline-block;
             width: auto;
             max-width: none;
@@ -52,12 +55,15 @@
             -moz-appearance: none;
         }
         .model-select:hover,
-        .model-select:focus {
+        .model-select:focus,
+        .system-select:hover,
+        .system-select:focus {
             background-color: var(--discord-darker);
             border-color: var(--discord-border);
             outline: none;
         }
-        .model-select:disabled {
+        .model-select:disabled,
+        .system-select:disabled {
             pointer-events: none; /* locked-in look same as default (no hover state) */
         }
     </style>
@@ -101,12 +107,22 @@
                 </button>
             </div>
             <div class="model-select-inline" id="model-select-inline">
-                <select id="model-select" class="model-select">
-                    {% for model in models %}
-                    <option value="{{ model }}" {% if model == 'gpt-5' %}selected{% endif %}>{{ model }}</option>
-                    {% endfor %}
-                </select>
-                <span id="model-select-measure" class="model-select-measure" aria-hidden="true"></span>
+                <div>
+                    <select id="system-select" class="system-select">
+                        {% for system in systems %}
+                        <option value="{{ system }}" {% if system == 'hp' %}selected{% endif %}>{{ system }}</option>
+                        {% endfor %}
+                    </select>
+                    <span id="system-select-measure" class="system-select-measure" aria-hidden="true"></span>
+                </div>
+                <div>
+                    <select id="model-select" class="model-select">
+                        {% for model in models %}
+                        <option value="{{ model }}" {% if model == 'openai/gpt-5' %}selected{% endif %}>{{ model }}</option>
+                        {% endfor %}
+                    </select>
+                    <span id="model-select-measure" class="model-select-measure" aria-hidden="true"></span>
+                </div>
             </div>
             <div class="chat-container">
                 <div id="chat-history" class="chat-history">

@@ -16,6 +16,8 @@ const exportButton = document.getElementById('export-button');
 const modelSelect = document.getElementById('model-select');
 const modelSelectMeasure = document.getElementById('model-select-measure');
 const modelSelectInline = document.getElementById('model-select-inline');
+const systemSelect = document.getElementById('system-select');
+const systemSelectMeasure = document.getElementById('system-select-measure');
 
 // Store conversation history
 let conversationHistory = [];
@@ -51,16 +53,53 @@ if (storyList) {
             }
             showTypingIndicator();
             if (modelSelect) modelSelect.disabled = true; // lock immediately; backend will confirm actual model
+            if (systemSelect) systemSelect.disabled = true; // lock immediately; backend will confirm actual system
             if (modelSelectInline) modelSelectInline.style.paddingTop = '0'; // tuck it under title without extra gap
         }
     });
 }
-// When backend confirms/locks a model for this story, reflect it in the UI
-socket.on('model_locked', function(data) {
+// When backend confirms/locks a model and system for this story, reflect it in the UI
+socket.on('story_locked', function(data) {
+    console.log('Story locked with data:', data);
+    
     if (modelSelect && data && data.model_name) {
+        // Temporarily enable to ensure value change works
+        modelSelect.disabled = false;
         modelSelect.value = data.model_name;
         modelSelect.disabled = true;
         if (modelSelectInline) modelSelectInline.style.paddingTop = '0';
+        // Update width after setting value
+        if (modelSelectMeasure) {
+            const selectedText = modelSelect.options[modelSelect.selectedIndex]?.text || '';
+            modelSelectMeasure.textContent = selectedText;
+            const computed = window.getComputedStyle(modelSelect);
+            const paddingLeft = parseFloat(computed.paddingLeft) || 0;
+            const paddingRight = parseFloat(computed.paddingRight) || 0;
+            const borderLeft = parseFloat(computed.borderLeftWidth) || 0;
+            const borderRight = parseFloat(computed.borderRightWidth) || 0;
+            const extra = paddingLeft + paddingRight + borderLeft + borderRight + 12;
+            modelSelect.style.width = (modelSelectMeasure.offsetWidth + extra) + 'px';
+        }
+        console.log('Model select updated to:', modelSelect.value);
+    }
+    if (systemSelect && data && data.system_name) {
+        // Temporarily enable to ensure value change works
+        systemSelect.disabled = false;
+        systemSelect.value = data.system_name;
+        systemSelect.disabled = true;
+        // Update width after setting value
+        if (systemSelectMeasure) {
+            const selectedText = systemSelect.options[systemSelect.selectedIndex]?.text || '';
+            systemSelectMeasure.textContent = selectedText;
+            const computed = window.getComputedStyle(systemSelect);
+            const paddingLeft = parseFloat(computed.paddingLeft) || 0;
+            const paddingRight = parseFloat(computed.paddingRight) || 0;
+            const borderLeft = parseFloat(computed.borderLeftWidth) || 0;
+            const borderRight = parseFloat(computed.borderRightWidth) || 0;
+            const extra = paddingLeft + paddingRight + borderLeft + borderRight + 12;
+            systemSelect.style.width = (systemSelectMeasure.offsetWidth + extra) + 'px';
+        }
+        console.log('System select updated to:', systemSelect.value);
     }
 });
 
@@ -68,7 +107,16 @@ socket.on('model_locked', function(data) {
 // New story button
 if (newStoryBtn) {
     newStoryBtn.addEventListener('click', function() {
+        const wasActive = createStoryContainer.classList.contains('active');
         createStoryContainer.classList.toggle('active');
+        
+        // Focus the input field when opening the create story form
+        if (!wasActive && createStoryContainer.classList.contains('active')) {
+            const newStoryInput = document.getElementById('new_story_name');
+            if (newStoryInput) {
+                setTimeout(() => newStoryInput.focus(), 0);
+            }
+        }
     });
 }
 
@@ -76,8 +124,14 @@ if (createStoryBtn) {
     createStoryBtn.addEventListener('click', function() {
         //e.preventDefault();
         new_story_name = document.getElementById('new_story_name').value;
+        const modelName = modelSelect ? modelSelect.value : 'openai/gpt-5';
+        const systemName = systemSelect ? systemSelect.value : 'hp';
         createStoryContainer.classList.remove('active');
-        socket.emit('create_story', { story_name: new_story_name });
+        socket.emit('create_story', { 
+            story_name: new_story_name,
+            model_name: modelName,
+            system_name: systemName
+        });
         createStoryContainer.classList.remove('active');
         addNewStory({ story_name: new_story_name });
     });
@@ -582,5 +636,37 @@ window.onload = function() {
         updateSelectWidth();
         modelSelect.addEventListener('change', updateSelectWidth);
         window.addEventListener('resize', () => { syncMeasureStyle(); updateSelectWidth(); });
+    }
+
+    // Adaptive width for system select based on current selection text
+    if (systemSelect && systemSelectMeasure) {
+        const updateSystemSelectWidth = () => {
+            const selectedText = systemSelect.options[systemSelect.selectedIndex]?.text || '';
+            systemSelectMeasure.textContent = selectedText;
+            const computed = window.getComputedStyle(systemSelect);
+            const paddingLeft = parseFloat(computed.paddingLeft) || 0;
+            const paddingRight = parseFloat(computed.paddingRight) || 0;
+            const borderLeft = parseFloat(computed.borderLeftWidth) || 0;
+            const borderRight = parseFloat(computed.borderRightWidth) || 0;
+            const extra = paddingLeft + paddingRight + borderLeft + borderRight + 12; // small buffer
+            systemSelect.style.width = (systemSelectMeasure.offsetWidth + extra) + 'px';
+        };
+        // Create hidden measurer styles
+        systemSelectMeasure.style.visibility = 'hidden';
+        systemSelectMeasure.style.whiteSpace = 'nowrap';
+        systemSelectMeasure.style.position = 'absolute';
+        systemSelectMeasure.style.pointerEvents = 'none';
+        // Match font styles
+        const syncSystemMeasureStyle = () => {
+            const cs = window.getComputedStyle(systemSelect);
+            systemSelectMeasure.style.fontFamily = cs.fontFamily;
+            systemSelectMeasure.style.fontSize = cs.fontSize;
+            systemSelectMeasure.style.fontWeight = cs.fontWeight;
+            systemSelectMeasure.style.letterSpacing = cs.letterSpacing;
+        };
+        syncSystemMeasureStyle();
+        updateSystemSelectWidth();
+        systemSelect.addEventListener('change', updateSystemSelectWidth);
+        window.addEventListener('resize', () => { syncSystemMeasureStyle(); updateSystemSelectWidth(); });
     }
 };

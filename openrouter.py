@@ -10,7 +10,7 @@ from model_tools import Toolbox
 import callbacks
 from callbacks import CallbackHandler
 
-#from utils import *
+from utils import *
 
 class OpenRouterStream:
     """
@@ -34,7 +34,6 @@ class OpenRouterStream:
             json = {
                 "model": model_name,
                 "messages": messages,
-                #"system": system_prompt,
                 "tools": tools,
                 "reasoning": {
                     "enabled": thinking_enabled,
@@ -200,9 +199,7 @@ class OpenRouterProvider():
                 if "messages" in data:
                     messages = data["messages"]
                     self.messages = messages
-                    if debug(): print(cyan, "Messages loaded successfully.", endc)
                     return messages
-        if debug(): print(cyan, "No messages found.", endc)
         return None
 
     def getStream(self) -> OpenRouterStream:
